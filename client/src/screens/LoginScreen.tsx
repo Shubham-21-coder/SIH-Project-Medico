@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
 import OtpModal from '../components/OtpModal';
+import { PatientInfo } from '../types/medikiosk';
 
-const LoginScreen = ({ onSubmit, onSkip }) => {
-  const [name, setName] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('Male');
-  const [identifier, setIdentifier] = useState(''); // Mobile or ABHA ID
-  const [showOtpModal, setShowOtpModal] = useState(false);
-  const [validationError, setValidationError] = useState('');
-  const [pendingData, setPendingData] = useState(null);
+interface LoginScreenProps {
+  onSubmit: (patientInfo: PatientInfo) => void;
+  onSkip?: () => void;
+}
 
-  const validateInput = () => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onSubmit }) => {
+  const [name, setName] = useState<string>('');
+  const [age, setAge] = useState<string>('');
+  const [gender, setGender] = useState<string>('Male');
+  const [identifier, setIdentifier] = useState<string>('');
+  const [showOtpModal, setShowOtpModal] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string>('');
+  const [pendingData, setPendingData] = useState<PatientInfo | null>(null);
+
+  const validateInput = (): boolean => {
     if (!name.trim()) {
       setValidationError('Please enter patient full name.');
       return false;
     }
 
-    if (!age || age < 1 || age > 120) {
+    const ageNum = Number(age);
+    if (!age || ageNum < 1 || ageNum > 120) {
       setValidationError('Please enter a valid age between 1 and 120.');
       return false;
     }
@@ -34,11 +41,11 @@ const LoginScreen = ({ onSubmit, onSkip }) => {
     return true;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateInput()) return;
 
-    const data = {
+    const data: PatientInfo = {
       name: name.trim(),
       age,
       gender,

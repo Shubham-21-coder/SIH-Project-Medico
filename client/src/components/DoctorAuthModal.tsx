@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
+import { DoctorInfo } from '../types/medikiosk';
 
-const DoctorAuthModal = ({ onAuthenticate, onClose }) => {
-  const [doctorId, setDoctorId] = useState('DOC-101');
-  const [pin, setPin] = useState('1234');
-  const [error, setError] = useState('');
+interface DoctorAuthModalProps {
+  onAuthenticate: (doctorInfo: DoctorInfo) => void;
+  onClose: () => void;
+}
 
-  const handleLogin = (e) => {
+const DoctorAuthModal: React.FC<DoctorAuthModalProps> = ({ onAuthenticate, onClose }) => {
+  const [doctorId, setDoctorId] = useState<string>('DOC-101');
+  const [pin, setPin] = useState<string>('1234');
+  const [error, setError] = useState<string>('');
+
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!doctorId.trim()) {
       setError('Please enter Doctor ID.');
@@ -48,7 +54,7 @@ const DoctorAuthModal = ({ onAuthenticate, onClose }) => {
             <input
               type="password"
               className="input-field"
-              maxLength="4"
+              maxLength={4}
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               placeholder="••••"

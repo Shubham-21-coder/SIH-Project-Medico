@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
+import { SummaryData, PatientInfo } from '../types/medikiosk';
 
-const DoctorViewScreen = ({
+interface DoctorViewScreenProps {
+  summary: SummaryData;
+  sessionId?: string;
+  language?: string;
+  chiefComplaint?: string;
+  patientInfo?: PatientInfo | null;
+  prescriptions?: string;
+  onSave: (summary: SummaryData) => void;
+}
+
+const DoctorViewScreen: React.FC<DoctorViewScreenProps> = ({
   summary,
   sessionId,
   language,
@@ -9,7 +20,7 @@ const DoctorViewScreen = ({
   prescriptions,
   onSave,
 }) => {
-  const [editedSummary, setEditedSummary] = useState(
+  const [editedSummary, setEditedSummary] = useState<SummaryData>(
     summary || {
       chief_complaint: '',
       hpi: '',
@@ -17,17 +28,17 @@ const DoctorViewScreen = ({
       review_of_systems: '',
     }
   );
-  const [editingField, setEditingField] = useState(null);
+  const [editingField, setEditingField] = useState<keyof SummaryData | null>(null);
 
-  const handleChange = (field, value) => {
+  const handleChange = (field: keyof SummaryData, value: string) => {
     setEditedSummary((prev) => ({ ...prev, [field]: value }));
   };
 
-  const toggleEdit = (field) => {
+  const toggleEdit = (field: keyof SummaryData) => {
     setEditingField(editingField === field ? null : field);
   };
 
-  const renderSection = (title, field, isLarge = false) => {
+  const renderSection = (title: string, field: keyof SummaryData, isLarge = false) => {
     const isEditing = editingField === field;
     return (
       <div className="summary-section glass-card">

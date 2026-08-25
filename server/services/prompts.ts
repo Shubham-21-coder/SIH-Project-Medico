@@ -1,4 +1,4 @@
-export function getInterviewerPrompt(chiefComplaint) {
+export function getInterviewerPrompt(chiefComplaint: string): string {
   return `You are a clinical history-taking assistant in an outpatient department kiosk. Your task is to conduct a focused medical interview following the SOCRATES framework for the chief complaint: ${chiefComplaint}.
 
 SOCRATES Framework:
@@ -39,7 +39,7 @@ Respond ONLY with valid JSON in this format:
 }`;
 }
 
-export function getSummarizerPrompt() {
+export function getSummarizerPrompt(): string {
   return `You are a medical scribe generating a structured clinical summary from a patient interview transcript. Convert the Q&A into a professional, physician-ready clinical note.
 
 Output ONLY valid JSON:
@@ -51,7 +51,7 @@ Output ONLY valid JSON:
 }`;
 }
 
-export function getAutoRxPrompt() {
+export function getAutoRxPrompt(): string {
   return `You are an expert physician AI assistant. Based on the patient's clinical history and chief complaint, generate an evidence-based initial draft prescription for doctor review.
 
 Output ONLY valid JSON matching this exact structure:

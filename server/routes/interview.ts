@@ -1,10 +1,10 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { createSession, getSession, updateSession } from '../sessions.js';
 import { getNextQuestion, generateSummary, generateAutoPrescription } from '../services/llm.js';
 
 const router = Router();
 
-router.post('/start', async (req, res) => {
+router.post('/start', async (req: Request, res: Response) => {
   try {
     const { language, chiefComplaint, patientInfo, prescriptions } = req.body;
     if (!chiefComplaint) {
@@ -29,7 +29,7 @@ router.post('/start', async (req, res) => {
   }
 });
 
-router.post('/next', async (req, res) => {
+router.post('/next', async (req: Request, res: Response) => {
   try {
     const { sessionId, answer } = req.body;
     if (!sessionId || !answer) {
@@ -41,7 +41,7 @@ router.post('/next', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    session.history.push({ q: session.currentQuestion, a: answer });
+    session.history.push({ q: session.currentQuestion || '', a: answer });
 
     const response = await getNextQuestion(session.chiefComplaint, session.history);
 
@@ -58,7 +58,7 @@ router.post('/next', async (req, res) => {
   }
 });
 
-router.post('/summary', async (req, res) => {
+router.post('/summary', async (req: Request, res: Response) => {
   try {
     const { sessionId, prescriptions } = req.body;
     if (!sessionId) {
@@ -84,7 +84,7 @@ router.post('/summary', async (req, res) => {
   }
 });
 
-router.post('/auto-rx', async (req, res) => {
+router.post('/auto-rx', async (req: Request, res: Response) => {
   try {
     const { chiefComplaint, summary } = req.body;
     const autoRx = await generateAutoPrescription(chiefComplaint || 'Chest Pain', summary);
@@ -96,4 +96,3 @@ router.post('/auto-rx', async (req, res) => {
 });
 
 export default router;
-

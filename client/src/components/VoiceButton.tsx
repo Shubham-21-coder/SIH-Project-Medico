@@ -1,13 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import useSpeechRecognition from '../hooks/useSpeechRecognition';
 
-const VoiceButton = ({ onTranscript, language = 'en-IN', disabled }) => {
+interface VoiceButtonProps {
+  onTranscript: (text: string) => void;
+  language?: string;
+  disabled?: boolean;
+}
+
+const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language = 'en-IN', disabled }) => {
   const langCode = language === 'hi' ? 'hi-IN' : 'en-IN';
   const { isListening, transcript, interimTranscript, isSupported, startListening, stopListening } = useSpeechRecognition(langCode);
-  const prevListeningRef = useRef(false);
+  const prevListeningRef = useRef<boolean>(false);
 
   useEffect(() => {
-    // When listening stops and we have a transcript, send it
     if (prevListeningRef.current && !isListening && transcript) {
       onTranscript(transcript);
     }
@@ -24,8 +29,9 @@ const VoiceButton = ({ onTranscript, language = 'en-IN', disabled }) => {
 
   if (!isSupported) {
     return (
-      <button 
-        className="voice-btn" 
+      <button
+        type="button"
+        className="voice-btn"
         disabled
         title="Voice input not supported in this browser"
       >
@@ -36,7 +42,7 @@ const VoiceButton = ({ onTranscript, language = 'en-IN', disabled }) => {
 
   return (
     <div className="voice-section">
-      <button 
+      <button
         type="button"
         className={`voice-btn ${isListening ? 'listening' : ''}`}
         onClick={toggleListening}

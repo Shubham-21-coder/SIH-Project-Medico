@@ -1,7 +1,44 @@
 import React, { useState } from 'react';
 import VoiceButton from '../components/VoiceButton';
+import { PatientInfo } from '../types/medikiosk';
 
-const SAMPLE_PRESCRIPTIONS = [
+interface SamplePrescription {
+  id: string;
+  title: string;
+  doctor: string;
+  date: string;
+  text: string;
+  ocrAnalysis: {
+    condition: string;
+    medicines: string[];
+    doctor: string;
+    date: string;
+    precautions: string;
+  };
+}
+
+interface UploadedFile {
+  name: string;
+  extractedText: string;
+}
+
+interface OcrAnalysisItem {
+  fileName: string;
+  condition: string;
+  medicines: string[];
+  doctor: string;
+  date: string;
+  precautions: string;
+  preview?: string;
+}
+
+interface PrescriptionScreenProps {
+  patientInfo?: PatientInfo | null;
+  onNext: (prescriptionsText: string) => void;
+  onSkip: () => void;
+}
+
+const SAMPLE_PRESCRIPTIONS: SamplePrescription[] = [
   {
     id: 'bp_rx',
     title: '🫀 Hypertension Rx',
@@ -46,21 +83,21 @@ const SAMPLE_PRESCRIPTIONS = [
   },
 ];
 
-const PrescriptionScreen = ({ patientInfo, onNext, onSkip }) => {
-  const [selectedPrescriptions, setSelectedPrescriptions] = useState([]);
-  const [customText, setCustomText] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [isScanning, setIsScanning] = useState(false);
-  const [analysisList, setAnalysisList] = useState([]);
+const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, onNext, onSkip }) => {
+  const [selectedPrescriptions, setSelectedPrescriptions] = useState<SamplePrescription[]>([]);
+  const [customText, setCustomText] = useState<string>('');
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [analysisList, setAnalysisList] = useState<OcrAnalysisItem[]>([]);
 
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
     setIsScanning(true);
     setTimeout(() => {
       const newFiles = files.map((file) => {
-        const ocrData = {
+        const ocrData: OcrAnalysisItem = {
           fileName: file.name,
           preview: URL.createObjectURL(file),
           condition: 'Scanned Clinical Record / Active Prescription',
@@ -81,7 +118,7 @@ const PrescriptionScreen = ({ patientInfo, onNext, onSkip }) => {
     }, 1500);
   };
 
-  const toggleSampleRx = (rx) => {
+  const toggleSampleRx = (rx: SamplePrescription) => {
     if (selectedPrescriptions.some((item) => item.id === rx.id)) {
       setSelectedPrescriptions(selectedPrescriptions.filter((item) => item.id !== rx.id));
       setAnalysisList(analysisList.filter((item) => item.fileName !== rx.id));
@@ -101,7 +138,7 @@ const PrescriptionScreen = ({ patientInfo, onNext, onSkip }) => {
     }
   };
 
-  const handleVoiceTranscript = (text) => {
+  const handleVoiceTranscript = (text: string) => {
     setCustomText((prev) => (prev ? `${prev} ${text}` : text));
   };
 

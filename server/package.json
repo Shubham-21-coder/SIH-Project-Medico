@@ -3,13 +3,20 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch index.js",
-    "start": "node index.js"
+    "dev": "npx tsx watch index.ts",
+    "start": "npx tsx index.ts"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "cors": "^2.8.5",
     "@google/generative-ai": "^0.21.0",
-    "dotenv": "^16.4.0"
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.3.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
   }
 }

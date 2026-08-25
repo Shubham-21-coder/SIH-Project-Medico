@@ -1,13 +1,12 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { sendRealSmsOtp, verifySmsOtp } from '../services/sms.js';
 
 const router = Router();
 
 /**
  * POST /api/auth/send-otp
- * Triggers real SMS dispatch to the mobile number
  */
-router.post('/send-otp', async (req, res) => {
+router.post('/send-otp', async (req: Request, res: Response) => {
   try {
     const { mobileNumber } = req.body;
     if (!mobileNumber) {
@@ -24,9 +23,8 @@ router.post('/send-otp', async (req, res) => {
 
 /**
  * POST /api/auth/verify-otp
- * Validates the entered OTP code
  */
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-otp', async (req: Request, res: Response) => {
   try {
     const { mobileNumber, otp } = req.body;
     if (!mobileNumber || !otp) {

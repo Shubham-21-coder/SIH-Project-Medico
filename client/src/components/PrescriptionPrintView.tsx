@@ -1,6 +1,19 @@
 import React from 'react';
+import { PrescriptionData, PatientInfo } from '../types/medikiosk';
 
-const PrescriptionPrintView = ({ prescription, patientInfo, chiefComplaint, onClose }) => {
+interface PrescriptionPrintViewProps {
+  prescription: PrescriptionData;
+  patientInfo?: PatientInfo | null;
+  chiefComplaint?: string;
+  onClose: () => void;
+}
+
+const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
+  prescription,
+  patientInfo,
+  chiefComplaint,
+  onClose,
+}) => {
   const currentDate = new Date().toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',

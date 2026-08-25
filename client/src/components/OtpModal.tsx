@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { sendSmsOtp, verifySmsOtp } from '../utils/api';
 
+interface OtpModalProps {
+  mobileNumber?: string;
+  onVerify: () => void;
+  onClose: () => void;
+}
+
 /**
  * Synthesizes a real phone SMS notification chime sound using Web Audio API
  */
 function playSmsChime() {
   try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc1 = audioCtx.createOscillator();
     const osc2 = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -36,7 +42,7 @@ function playSmsChime() {
 /**
  * Triggers a real OS Desktop/Mobile system notification popup
  */
-function triggerSystemNotification(mobileNumber, otpCode) {
+function triggerSystemNotification(mobileNumber: string, otpCode: string) {
   if (!('Notification' in window)) return;
 
   const showNotif = () => {
@@ -55,13 +61,13 @@ function triggerSystemNotification(mobileNumber, otpCode) {
   }
 }
 
-const OtpModal = ({ mobileNumber, onVerify, onClose }) => {
-  const [otp, setOtp] = useState(['', '', '', '']);
-  const [timer, setTimer] = useState(30);
-  const [error, setError] = useState('');
-  const [serverMsg, setServerMsg] = useState('');
-  const [isSending, setIsSending] = useState(true);
-  const [isVerifying, setIsVerifying] = useState(false);
+const OtpModal: React.FC<OtpModalProps> = ({ mobileNumber, onVerify, onClose }) => {
+  const [otp, setOtp] = useState<string[]>(['', '', '', '']);
+  const [timer, setTimer] = useState<number>(30);
+  const [error, setError] = useState<string>('');
+  const [serverMsg, setServerMsg] = useState<string>('');
+  const [isSending, setIsSending] = useState<boolean>(true);
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
   const requestSms = async () => {
     setIsSending(true);
@@ -91,7 +97,7 @@ const OtpModal = ({ mobileNumber, onVerify, onClose }) => {
     return () => clearInterval(countdown);
   }, [mobileNumber]);
 
-  const handleOtpChange = (index, value) => {
+  const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
     const updated = [...otp];
     updated[index] = value.slice(-1);
@@ -103,7 +109,7 @@ const OtpModal = ({ mobileNumber, onVerify, onClose }) => {
     }
   };
 
-  const handleVerify = async (e) => {
+  const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     const enteredOtp = otp.join('');
     if (enteredOtp.length < 4) {
@@ -160,7 +166,7 @@ const OtpModal = ({ mobileNumber, onVerify, onClose }) => {
                 id={`otp-input-${idx}`}
                 type="text"
                 className="otp-box"
-                maxLength="1"
+                maxLength={1}
                 value={digit}
                 onChange={(e) => handleOtpChange(idx, e.target.value)}
               />

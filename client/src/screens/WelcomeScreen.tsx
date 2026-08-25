@@ -1,15 +1,20 @@
 import React, { useState } from 'react';
 
-const WelcomeScreen = ({ onStart, isLoading }) => {
-  const [step, setStep] = useState(1);
-  const [selectedLang, setSelectedLang] = useState('');
+interface WelcomeScreenProps {
+  onStart: (language: string, chiefComplaint: string) => void;
+  isLoading?: boolean;
+}
 
-  const handleLanguageSelect = (lang) => {
+const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
+  const [step, setStep] = useState<number>(1);
+  const [selectedLang, setSelectedLang] = useState<string>('');
+
+  const handleLanguageSelect = (lang: string) => {
     setSelectedLang(lang);
     setStep(2);
   };
 
-  const handleComplaintSelect = (complaint) => {
+  const handleComplaintSelect = (complaint: string) => {
     onStart(selectedLang, complaint);
   };
 
@@ -24,11 +29,11 @@ const WelcomeScreen = ({ onStart, isLoading }) => {
               Complete your medical history in minutes using voice or touch, before seeing your doctor.
             </div>
           </div>
-          
+
           <h2 style={{ marginTop: '3rem' }}>Please select your language</h2>
           <div className="card-grid">
             <div className="card language-card glass-card" onClick={() => handleLanguageSelect('en')}>
-              <div className="icon">🇺🇸</div>
+              <div className="icon">🇬🇧</div>
               <div className="card-label">English</div>
             </div>
             <div className="card language-card glass-card" onClick={() => handleLanguageSelect('hi')}>
@@ -44,7 +49,7 @@ const WelcomeScreen = ({ onStart, isLoading }) => {
           <div className="welcome-header">
             <h1>MediKiosk ✚</h1>
           </div>
-          
+
           <h2>What brings you in today?</h2>
           <div className="card-grid complaint-grid">
             <div className="card complaint-card glass-card" onClick={() => handleComplaintSelect('Chest Pain')}>
@@ -68,8 +73,8 @@ const WelcomeScreen = ({ onStart, isLoading }) => {
               <div className="card-desc">Abdominal pain or discomfort</div>
             </div>
           </div>
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             style={{ marginTop: '2rem' }}
             onClick={() => setStep(1)}
           >

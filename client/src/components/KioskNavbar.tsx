@@ -1,6 +1,14 @@
 import React from 'react';
+import { PatientInfo } from '../types/medikiosk';
 
-const KioskNavbar = ({ mode, onToggleMode, onNewPatient, patientInfo }) => {
+interface KioskNavbarProps {
+  mode: 'doctor' | 'kiosk';
+  onToggleMode: () => void;
+  onNewPatient: (() => void) | null;
+  patientInfo?: PatientInfo | null;
+}
+
+const KioskNavbar: React.FC<KioskNavbarProps> = ({ mode, onToggleMode, onNewPatient, patientInfo }) => {
   return (
     <header className="kiosk-navbar">
       <div className="kiosk-brand">

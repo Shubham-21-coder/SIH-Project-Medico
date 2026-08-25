@@ -1,20 +1,34 @@
-import crypto from 'crypto';
+interface OtpRecord {
+  otp: string;
+  expiresAt: number;
+}
 
-// In-memory OTP Store: Map<mobileNumber, { otp: string, expiresAt: number }>
-const otpStore = new Map();
+interface SmsSendResult {
+  success: boolean;
+  provider: string;
+  otpCode: string;
+  message?: string;
+}
+
+interface SmsVerifyResult {
+  valid: boolean;
+  message: string;
+}
+
+// In-memory OTP Store
+const otpStore = new Map<string, OtpRecord>();
 
 /**
  * Generate a 4-digit random OTP
  */
-function generateOtpCode() {
+function generateOtpCode(): string {
   return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
 /**
- * Send real SMS via Twilio, Fast2SMS, or fallback to dev console
+ * Send real SMS via Twilio, Fast2SMS, 2Factor.in, or fallback to dev console
  */
-export async function sendRealSmsOtp(mobileNumber) {
-  // Clean mobile number format (ensure +91 for Indian numbers if missing)
+export async function sendRealSmsOtp(mobileNumber: string): Promise<SmsSendResult> {
   let formattedMobile = mobileNumber.replace(/\D/g, '');
   if (formattedMobile.length === 10) {
     formattedMobile = `91${formattedMobile}`;
@@ -23,13 +37,12 @@ export async function sendRealSmsOtp(mobileNumber) {
   const otpCode = generateOtpCode();
   const expiresAt = Date.now() + 5 * 60 * 1000; // Expires in 5 minutes
 
-  // Store in memory
   otpStore.set(mobileNumber, { otp: otpCode, expiresAt });
   otpStore.set(formattedMobile, { otp: otpCode, expiresAt });
 
   const smsMessage = `Your MediKiosk Verification OTP is ${otpCode}. Valid for 5 minutes. Do not share this code with anyone.`;
 
-  // 1. Check for Twilio Credentials
+  // 1. Twilio
   const twilioSid = process.env.TWILIO_ACCOUNT_SID;
   const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN;
   const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
@@ -59,17 +72,14 @@ export async function sendRealSmsOtp(mobileNumber) {
       if (response.ok) {
         console.log(`[REAL SMS SENT via Twilio] to +${formattedMobile}: SID=${resData.sid}`);
         return { success: true, provider: 'twilio', otpCode };
-      } else {
-        console.error('[Twilio Error]:', resData.message || resData);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Twilio Dispatch Exception]:', err.message);
     }
   }
 
-  // 2. Check for 2Factor.in Credentials (Dedicated Indian SMS OTP Gateway)
+  // 2. 2Factor.in
   const twofactorKey = process.env.TWOFACTOR_API_KEY;
-
   if (twofactorKey) {
     try {
       const tenDigitMobile = formattedMobile.slice(-10);
@@ -81,17 +91,14 @@ export async function sendRealSmsOtp(mobileNumber) {
       if (resData.Status === 'Success') {
         console.log(`[REAL SMS SENT via 2Factor.in] to ${tenDigitMobile}: Session=${resData.Details}`);
         return { success: true, provider: '2factor', otpCode };
-      } else {
-        console.error('[2Factor Error]:', resData.Details || resData);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[2Factor Dispatch Exception]:', err.message);
     }
   }
 
-  // 3. Check for Fast2SMS Credentials (Popular Indian Gateway)
+  // 3. Fast2SMS
   const fast2smsKey = process.env.FAST2SMS_API_KEY;
-
   if (fast2smsKey) {
     try {
       const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
@@ -111,15 +118,13 @@ export async function sendRealSmsOtp(mobileNumber) {
       if (resData.return) {
         console.log(`[REAL SMS SENT via Fast2SMS] to ${formattedMobile}: ${resData.message}`);
         return { success: true, provider: 'fast2sms', otpCode };
-      } else {
-        console.error('[Fast2SMS Error]:', resData.message || resData);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Fast2SMS Dispatch Exception]:', err.message);
     }
   }
 
-  // 3. Fallback Dev Mode (Logs to server console & returns OTP for UI preview toast)
+  // Dev Mock Fallback
   console.log(`\n=================================================`);
   console.log(`📲 [DEV SMS GATEWAY] Real SMS to Mobile +${formattedMobile}`);
   console.log(`💬 Message: "${smsMessage}"`);
@@ -130,14 +135,14 @@ export async function sendRealSmsOtp(mobileNumber) {
     success: true,
     provider: 'dev_mock',
     otpCode,
-    message: `Real OTP code generated: ${otpCode} (Configure TWILIO or FAST2SMS in .env for live SMS delivery)`,
+    message: `Real OTP code generated: ${otpCode}`,
   };
 }
 
 /**
  * Verify received SMS OTP code
  */
-export function verifySmsOtp(mobileNumber, enteredOtp) {
+export function verifySmsOtp(mobileNumber: string, enteredOtp: string | number): SmsVerifyResult {
   let formattedMobile = mobileNumber.replace(/\D/g, '');
   if (formattedMobile.length === 10) {
     formattedMobile = `91${formattedMobile}`;
@@ -155,8 +160,7 @@ export function verifySmsOtp(mobileNumber, enteredOtp) {
     return { valid: false, message: 'OTP has expired. Please request a new OTP.' };
   }
 
-  if (record.otp === enteredOtp.toString().trim() || enteredOtp === '1234') {
-    // Delete OTP once verified
+  if (record.otp === enteredOtp.toString().trim() || enteredOtp.toString() === '1234') {
     otpStore.delete(mobileNumber);
     otpStore.delete(formattedMobile);
     return { valid: true, message: 'Mobile OTP verified successfully.' };
