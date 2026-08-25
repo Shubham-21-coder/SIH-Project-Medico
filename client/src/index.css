@@ -2092,5 +2092,17 @@ select.input-field {
   justify-content: flex-end;
 }
 
+.sms-debug-toast {
+  background: rgba(0, 212, 170, 0.12);
+  border: 1px solid var(--border-active);
+  color: var(--accent-teal);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: 100%;
+}
+
+
 
 

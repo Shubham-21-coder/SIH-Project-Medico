@@ -22,6 +22,20 @@ async function request(endpoint, options = {}) {
   }
 }
 
+export async function sendSmsOtp(mobileNumber) {
+  return request('/auth/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ mobileNumber }),
+  });
+}
+
+export async function verifySmsOtp(mobileNumber, otp) {
+  return request('/auth/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ mobileNumber, otp }),
+  });
+}
+
 export async function startInterview(language, chiefComplaint, patientInfo, prescriptions) {
   return request('/interview/start', {
     method: 'POST',
