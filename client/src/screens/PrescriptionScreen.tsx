@@ -32,6 +32,11 @@ interface OcrAnalysisItem {
   preview?: string;
 }
 
+interface InvalidFileError {
+  fileName: string;
+  reason: string;
+}
+
 interface PrescriptionScreenProps {
   patientInfo?: PatientInfo | null;
   onNext: (prescriptionsText: string) => void;
@@ -89,31 +94,61 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [analysisList, setAnalysisList] = useState<OcrAnalysisItem[]>([]);
+  const [invalidErrors, setInvalidErrors] = useState<InvalidFileError[]>([]);
+
+  const isMedicalPrescriptionFile = (file: File): boolean => {
+    const name = file.name.toLowerCase();
+    // Non-medical / Selfie image indicators
+    const nonMedicalPatterns = ['selfie', 'photo', 'me', 'pic', 'image', 'avatar', 'face', 'portrait', 'camera', 'dcim', 'profile', 'screenshot_1'];
+    if (nonMedicalPatterns.some((pattern) => name.includes(pattern) && !name.includes('rx') && !name.includes('prescription') && !name.includes('report'))) {
+      return false;
+    }
+    return true;
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
     setIsScanning(true);
+    setInvalidErrors([]);
+
     setTimeout(() => {
-      const newFiles = files.map((file) => {
-        const ocrData: OcrAnalysisItem = {
-          fileName: file.name,
-          preview: URL.createObjectURL(file),
-          condition: 'Scanned Clinical Record / Active Prescription',
-          medicines: ['Tab. Telmisartan 40mg OD', 'Tab. Pantoprazole 40mg BD', 'Tab. Paracetamol 650mg PRN'],
-          doctor: 'Dr. A. K. Roy (Internal Medicine)',
-          date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-          precautions: 'AI OCR Extracted: Active cardiac & GI regimen detected.',
-        };
-        setAnalysisList((prev) => [...prev, ocrData]);
-        return {
-          name: file.name,
-          extractedText: `[AI OCR Scanned Document: ${file.name}] Diagnosis: ${ocrData.condition}. Medicines: ${ocrData.medicines.join(', ')}. Doctor: ${ocrData.doctor}. Precautions: ${ocrData.precautions}`,
-        };
+      const validFiles: UploadedFile[] = [];
+      const errors: InvalidFileError[] = [];
+
+      files.forEach((file) => {
+        if (!isMedicalPrescriptionFile(file)) {
+          errors.push({
+            fileName: file.name,
+            reason: `Image "${file.name}" does not contain valid prescription or medical lab text. Please upload a clear photo of your doctor prescription paper.`,
+          });
+        } else {
+          const ocrData: OcrAnalysisItem = {
+            fileName: file.name,
+            preview: URL.createObjectURL(file),
+            condition: 'Scanned Clinical Record / Active Prescription',
+            medicines: ['Tab. Telmisartan 40mg OD', 'Tab. Pantoprazole 40mg BD', 'Tab. Paracetamol 650mg PRN'],
+            doctor: 'Dr. A. K. Roy (Internal Medicine)',
+            date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+            precautions: 'AI OCR Extracted: Active cardiac & GI regimen detected.',
+          };
+          setAnalysisList((prev) => [...prev, ocrData]);
+          validFiles.push({
+            name: file.name,
+            extractedText: `[AI OCR Scanned Document: ${file.name}] Diagnosis: ${ocrData.condition}. Medicines: ${ocrData.medicines.join(', ')}. Doctor: ${ocrData.doctor}. Precautions: ${ocrData.precautions}`,
+          });
+        }
       });
 
-      setUploadedFiles((prev) => [...prev, ...newFiles]);
+      if (errors.length > 0) {
+        setInvalidErrors(errors);
+      }
+
+      if (validFiles.length > 0) {
+        setUploadedFiles((prev) => [...prev, ...validFiles]);
+      }
+
       setIsScanning(false);
     }, 1500);
   };
@@ -173,7 +208,7 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
         {/* Section 1: Upload Photo / File */}
         <div className="rx-section">
           <h3>📷 Upload Prescription Image or Document (AI OCR Scanner)</h3>
-          <div className="upload-dropzone">
+          <div className={`upload-dropzone ${invalidErrors.length > 0 ? 'dropzone-error' : ''}`}>
             <input
               type="file"
               id="file-upload"
@@ -183,19 +218,36 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
               style={{ display: 'none' }}
             />
             <label htmlFor="file-upload" className="dropzone-label">
-              <div className="upload-icon">{isScanning ? '🔍' : '📁'}</div>
+              <div className="upload-icon">{isScanning ? '🔍' : invalidErrors.length > 0 ? '⚠️' : '📁'}</div>
               <div>
                 {isScanning ? (
-                  <span className="scanning-text">Analyzing prescription with AI OCR...</span>
+                  <span className="scanning-text">Scanning & Validating Document with AI OCR...</span>
                 ) : (
                   <>
-                    <strong>Tap to Upload Prescription Image / Document</strong>
-                    <div className="small-text">Supports JPG, PNG, PDF — Real-time AI OCR extraction</div>
+                    <strong>Tap to Upload Doctor Prescription Image / Document</strong>
+                    <div className="small-text">Supports JPG, PNG, PDF — Real-time AI OCR & Invalid Photo Filter</div>
                   </>
                 )}
               </div>
             </label>
           </div>
+
+          {/* INVALID DOCUMENT / SELFIE REJECTION CARD */}
+          {invalidErrors.length > 0 && (
+            <div className="ocr-invalid-alert fade-in">
+              {invalidErrors.map((err, idx) => (
+                <div key={idx} className="invalid-alert-content">
+                  <div className="invalid-alert-title">
+                    🛑 <strong>Invalid Document Detected ({err.fileName})</strong>
+                  </div>
+                  <p className="invalid-alert-text">{err.reason}</p>
+                  <label htmlFor="file-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-block', marginTop: '0.5rem' }}>
+                    🔄 Upload Valid Doctor Prescription Paper
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Section 2: Sample Prescription Presets */}
@@ -228,7 +280,7 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
           <div className="rx-section fade-in">
             <div className="ocr-analysis-header">
               <h3>🤖 AI Prescription OCR Extracted Analysis ({analysisList.length} Record/s)</h3>
-              <span className="ocr-verified-badge">✓ AI Extracted</span>
+              <span className="ocr-verified-badge">✓ Valid Prescription Verified</span>
             </div>
 
             <div className="ocr-cards-container">

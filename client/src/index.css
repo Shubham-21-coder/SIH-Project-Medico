@@ -2198,6 +2198,35 @@ select.input-field {
   line-height: 1.5;
 }
 
+/* Invalid Document / Selfie Detection Styles */
+.dropzone-error {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+
+.ocr-invalid-alert {
+  margin-top: 1rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1.5px solid rgba(239, 68, 68, 0.4);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+}
+
+.invalid-alert-title {
+  color: #ef4444;
+  font-size: 1.05rem;
+  margin-bottom: 0.35rem;
+}
+
+.invalid-alert-text {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+
 
 
 
