@@ -79,11 +79,12 @@ const DoctorViewScreen = ({
         </div>
       </div>
 
-      {/* Previous Prescriptions & Records Attachment Banner */}
+      {/* Previous Prescriptions & AI OCR Analysis Report Banner */}
       {prescriptions && (
         <div className="summary-section glass-card rx-attachment-banner">
           <div className="section-header">
-            <h3>📑 Attached Previous Prescriptions & Medical Records</h3>
+            <h3>🤖 AI Prescription OCR Document Analysis & Extracted Records</h3>
+            <span className="ocr-verified-badge">✓ Document Extracted</span>
           </div>
           <pre className="summary-text rx-pre">{prescriptions}</pre>
         </div>
