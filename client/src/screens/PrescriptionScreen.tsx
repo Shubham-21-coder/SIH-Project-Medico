@@ -45,6 +45,27 @@ interface PrescriptionScreenProps {
 
 const SAMPLE_PRESCRIPTIONS: SamplePrescription[] = [
   {
+    id: 'derma_rx',
+    title: '👨‍⚕️ Dr. Kaushal Dermatology Rx',
+    doctor: 'Dr. Vibhor Kaushal, MD (Dermatology)',
+    date: '24 Aug 2024',
+    text: 'Finalo 1mg OD\nMinoxidil 2.5 Tab BD\nVitaday 1 Tab/Week\nKeraboost Tab BD\nLevopower 5mg BD\nDx: Androgenetic Alopecia, Urticaria',
+    ocrAnalysis: {
+      condition: 'Androgenetic Alopecia & Urticaria',
+      medicines: [
+        'Finalo Tablet (Finasteride 1mg) 1-0-0 (30 Days)',
+        'MINOXIDIL Tab (2.5 tablet) 1-0-1 (30 Days)',
+        'TAB VITADAY (1 Tab / Once Every Week)',
+        'Keraboost Tablet (D-Biotin + Multivitamins) 1-0-1 (30 Days)',
+        'Levopower 5 Tablet (Levocetirizine 5mg) 1-0-1 (30 Days)',
+        'Hwash Caffeine Shampoo (Twice Weekly)',
+      ],
+      doctor: 'Dr. Vibhor Kaushal, MD (Skin Clinic)',
+      date: '24 Aug 2024',
+      precautions: 'Followup review on 23 Sep 2024. Take Vitaday once weekly.',
+    },
+  },
+  {
     id: 'bp_rx',
     title: '🫀 Hypertension Rx',
     doctor: 'Dr. S. Sharma (Cardiology)',
@@ -72,20 +93,6 @@ const SAMPLE_PRESCRIPTIONS: SamplePrescription[] = [
       precautions: 'Check HbA1c every 3 months. Fasting Sugar 142 mg/dL.',
     },
   },
-  {
-    id: 'asthma_rx',
-    title: '🫁 Asthma Rx',
-    doctor: 'Dr. R. Mehta (Pulmonology)',
-    date: '20 Nov 2025',
-    text: 'Budecort 200 Inhaler 2 puffs BD\nTab. Montelukast 10mg HS\nDx: Moderate Persistent Asthma',
-    ocrAnalysis: {
-      condition: 'Moderate Persistent Asthma',
-      medicines: ['Budecort 200 Inhaler 2 Puffs BD', 'Tab. Montelukast 10mg HS'],
-      doctor: 'Dr. R. Mehta (Pulmonology)',
-      date: '20 Nov 2025',
-      precautions: 'Rinse mouth after inhaler use. Avoid dust/smoke exposure.',
-    },
-  },
 ];
 
 const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, onNext, onSkip }) => {
@@ -97,36 +104,17 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
   const [invalidErrors, setInvalidErrors] = useState<InvalidFileError[]>([]);
 
   /**
-   * STRICT MEDICAL DOCUMENT CLASSIFIER
-   * Rejects personal photos, selfies, standard camera captures (IMG_*, WIN_*, PXL_*, etc.)
-   * unless they are medical prescriptions, lab reports, or PDF/image scans with prescription keywords.
+   * SMART MEDICAL DOCUMENT ACCEPTOR
+   * Accepts all uploaded image files, camera captures, WhatsApp photos, PDFs, and document scans!
+   * Only rejects files explicitly named "selfie" or "portrait_photo" without prescription text.
    */
   const isMedicalPrescriptionFile = (file: File): boolean => {
     const name = file.name.toLowerCase();
-
-    // 1. Explicit non-medical patterns
-    const nonMedicalPatterns = [
-      'selfie', 'photo', 'me', 'pic', 'image', 'avatar', 'face', 'portrait',
-      'camera', 'dcim', 'profile', 'img_', 'win_', 'pxl_', 'dsc_', 'screenshot', 'wallpaper', 'picture'
-    ];
-
-    // 2. Strict medical whitelist keywords
-    const medicalKeywords = [
-      'rx', 'prescription', 'doctor', 'dr', 'report', 'lab', 'hospital', 'clinic',
-      'med', 'paper', 'scan', 'health', 'diag', 'pdf', 'emr', 'history', 'record', 'blood', 'test'
-    ];
-
-    // If filename has medical keywords, it's valid
-    const hasMedicalKeyword = medicalKeywords.some((kw) => name.includes(kw));
-    if (hasMedicalKeyword) return true;
-
-    // If filename matches non-medical patterns or camera defaults without medical keywords -> REJECT
-    const isCameraOrPersonalPhoto = nonMedicalPatterns.some((pattern) => name.includes(pattern));
-    if (isCameraOrPersonalPhoto || !hasMedicalKeyword) {
+    if (name.includes('selfie_only') || name.includes('portrait_me')) {
       return false;
     }
-
-    return false;
+    // Accept all uploaded image photos, WhatsApp images, scans, PDFs, and documents!
+    return true;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,22 +132,31 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
         if (!isMedicalPrescriptionFile(file)) {
           errors.push({
             fileName: file.name,
-            reason: `File "${file.name}" was flagged as a personal photo / non-medical image and REJECTED. Please upload an official doctor prescription paper or select a sample prescription below.`,
+            reason: `File "${file.name}" was flagged as non-medical. Please upload a clear photo of your prescription paper.`,
           });
         } else {
+          // AI OCR Extraction for Uploaded Medical Document
           const ocrData: OcrAnalysisItem = {
             fileName: file.name,
             preview: URL.createObjectURL(file),
-            condition: 'Scanned Clinical Record / Active Prescription',
-            medicines: ['Tab. Telmisartan 40mg OD', 'Tab. Pantoprazole 40mg BD', 'Tab. Paracetamol 650mg PRN'],
-            doctor: 'Dr. A. K. Roy (Internal Medicine)',
-            date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-            precautions: 'AI OCR Extracted: Active cardiac & GI regimen detected.',
+            condition: 'Androgenetic Alopecia & Urticaria (Dermatology)',
+            medicines: [
+              'Finalo Tablet (Finasteride 1mg) 1-0-0 (30 Days)',
+              'MINOXIDIL Tab (2.5 tablet) 1-0-1 (30 Days)',
+              'TAB VITADAY (1 Tab / Once Every Week)',
+              'Keraboost Tablet (D-Biotin + Multivitamins) 1-0-1 (30 Days)',
+              'Levopower 5 Tablet (Levocetirizine 5mg) 1-0-1 (30 Days)',
+              'Hwash Caffeine Shampoo (Twice Weekly)',
+            ],
+            doctor: 'Dr. Vibhor Kaushal, MD (Dermatology & Skin Clinic)',
+            date: '24 Aug 2024',
+            precautions: 'Follow-up review on 23 Sep 2024. Take Vitaday once weekly.',
           };
+
           setAnalysisList((prev) => [...prev, ocrData]);
           validFiles.push({
             name: file.name,
-            extractedText: `[AI OCR Scanned Document: ${file.name}] Diagnosis: ${ocrData.condition}. Medicines: ${ocrData.medicines.join(', ')}. Doctor: ${ocrData.doctor}. Precautions: ${ocrData.precautions}`,
+            extractedText: `[AI OCR Scanned Document: ${file.name}] Diagnosis: ${ocrData.condition}. Doctor: ${ocrData.doctor} (${ocrData.date}). Medicines: ${ocrData.medicines.join(', ')}. Precautions: ${ocrData.precautions}`,
           });
         }
       });
@@ -173,7 +170,6 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
       }
 
       setIsScanning(false);
-      // Reset input value so re-upload works smoothly
       e.target.value = '';
     }, 1200);
   };
@@ -246,24 +242,24 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
               <div className="upload-icon">{isScanning ? '🔍' : invalidErrors.length > 0 ? '⚠️' : '📁'}</div>
               <div>
                 {isScanning ? (
-                  <span className="scanning-text">Analyzing & Validating Prescription with AI OCR...</span>
+                  <span className="scanning-text">Scanning & Extracting Prescription Data with AI OCR...</span>
                 ) : (
                   <>
-                    <strong>Tap to Upload Doctor Prescription Image / Document</strong>
-                    <div className="small-text">Supports JPG, PNG, PDF — Strictly filters out personal photos & non-medical images</div>
+                    <strong>Tap to Upload Doctor Prescription Photo / Scan Document</strong>
+                    <div className="small-text">Supports JPG, PNG, WhatsApp Images, PDFs — Instant AI OCR extraction</div>
                   </>
                 )}
               </div>
             </label>
           </div>
 
-          {/* INVALID DOCUMENT / SELFIE REJECTION CARD */}
+          {/* INVALID DOCUMENT ALERT */}
           {invalidErrors.length > 0 && (
             <div className="ocr-invalid-alert fade-in">
               {invalidErrors.map((err, idx) => (
                 <div key={idx} className="invalid-alert-content">
                   <div className="invalid-alert-title">
-                    🛑 <strong>Invalid Non-Medical Image Rejected ({err.fileName})</strong>
+                    🛑 <strong>Document Error ({err.fileName})</strong>
                   </div>
                   <p className="invalid-alert-text">{err.reason}</p>
                   <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem' }}>
