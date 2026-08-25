@@ -67,7 +67,29 @@ export async function sendRealSmsOtp(mobileNumber) {
     }
   }
 
-  // 2. Check for Fast2SMS Credentials (Popular Indian Gateway)
+  // 2. Check for 2Factor.in Credentials (Dedicated Indian SMS OTP Gateway)
+  const twofactorKey = process.env.TWOFACTOR_API_KEY;
+
+  if (twofactorKey) {
+    try {
+      const tenDigitMobile = formattedMobile.slice(-10);
+      const url = `https://2factor.in/API/V1/${twofactorKey}/SMS/${tenDigitMobile}/${otpCode}/AUTOGEN`;
+
+      const response = await fetch(url);
+      const resData = await response.json();
+
+      if (resData.Status === 'Success') {
+        console.log(`[REAL SMS SENT via 2Factor.in] to ${tenDigitMobile}: Session=${resData.Details}`);
+        return { success: true, provider: '2factor', otpCode };
+      } else {
+        console.error('[2Factor Error]:', resData.Details || resData);
+      }
+    } catch (err) {
+      console.error('[2Factor Dispatch Exception]:', err.message);
+    }
+  }
+
+  // 3. Check for Fast2SMS Credentials (Popular Indian Gateway)
   const fast2smsKey = process.env.FAST2SMS_API_KEY;
 
   if (fast2smsKey) {
