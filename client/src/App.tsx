@@ -31,7 +31,7 @@ type AppStep =
 
 export default function App() {
   const [mode, setMode] = useState<'kiosk' | 'doctor'>('kiosk');
-  const [currentStep, setCurrentStep] = useState<AppStep>('welcome');
+  const [currentStep, setCurrentStep] = useState<AppStep>('login');
 
   // Intake State
   const [language, setLanguage] = useState<string>('en');
@@ -157,6 +157,7 @@ export default function App() {
         mode={mode}
         onToggleMode={handleToggleMode}
         onNewPatient={handleReset}
+        onGoToLogin={() => setCurrentStep('login')}
         patientInfo={patientInfo}
       />
 

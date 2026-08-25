@@ -5,13 +5,14 @@ interface KioskNavbarProps {
   mode: 'doctor' | 'kiosk';
   onToggleMode: () => void;
   onNewPatient: (() => void) | null;
+  onGoToLogin?: () => void;
   patientInfo?: PatientInfo | null;
 }
 
-const KioskNavbar: React.FC<KioskNavbarProps> = ({ mode, onToggleMode, onNewPatient, patientInfo }) => {
+const KioskNavbar: React.FC<KioskNavbarProps> = ({ mode, onToggleMode, onNewPatient, onGoToLogin, patientInfo }) => {
   return (
     <header className="kiosk-navbar">
-      <div className="kiosk-brand">
+      <div className="kiosk-brand" onClick={onGoToLogin} style={{ cursor: 'pointer' }}>
         <span className="brand-logo">🏥</span>
         <span>MediKiosk</span>
         <span className="brand-tag">OPD AI Portal</span>
@@ -22,6 +23,16 @@ const KioskNavbar: React.FC<KioskNavbarProps> = ({ mode, onToggleMode, onNewPati
           <span className="patient-badge">
             👤 {patientInfo.name} ({patientInfo.age}y/{patientInfo.gender})
           </span>
+        )}
+
+        {onGoToLogin && (
+          <button
+            className="btn btn-secondary"
+            onClick={onGoToLogin}
+            style={{ height: '40px', padding: '0 16px', fontSize: '0.85rem' }}
+          >
+            📱 Patient Login / Verification
+          </button>
         )}
 
         <button
