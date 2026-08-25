@@ -96,14 +96,37 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
   const [analysisList, setAnalysisList] = useState<OcrAnalysisItem[]>([]);
   const [invalidErrors, setInvalidErrors] = useState<InvalidFileError[]>([]);
 
+  /**
+   * STRICT MEDICAL DOCUMENT CLASSIFIER
+   * Rejects personal photos, selfies, standard camera captures (IMG_*, WIN_*, PXL_*, etc.)
+   * unless they are medical prescriptions, lab reports, or PDF/image scans with prescription keywords.
+   */
   const isMedicalPrescriptionFile = (file: File): boolean => {
     const name = file.name.toLowerCase();
-    // Non-medical / Selfie image indicators
-    const nonMedicalPatterns = ['selfie', 'photo', 'me', 'pic', 'image', 'avatar', 'face', 'portrait', 'camera', 'dcim', 'profile', 'screenshot_1'];
-    if (nonMedicalPatterns.some((pattern) => name.includes(pattern) && !name.includes('rx') && !name.includes('prescription') && !name.includes('report'))) {
+
+    // 1. Explicit non-medical patterns
+    const nonMedicalPatterns = [
+      'selfie', 'photo', 'me', 'pic', 'image', 'avatar', 'face', 'portrait',
+      'camera', 'dcim', 'profile', 'img_', 'win_', 'pxl_', 'dsc_', 'screenshot', 'wallpaper', 'picture'
+    ];
+
+    // 2. Strict medical whitelist keywords
+    const medicalKeywords = [
+      'rx', 'prescription', 'doctor', 'dr', 'report', 'lab', 'hospital', 'clinic',
+      'med', 'paper', 'scan', 'health', 'diag', 'pdf', 'emr', 'history', 'record', 'blood', 'test'
+    ];
+
+    // If filename has medical keywords, it's valid
+    const hasMedicalKeyword = medicalKeywords.some((kw) => name.includes(kw));
+    if (hasMedicalKeyword) return true;
+
+    // If filename matches non-medical patterns or camera defaults without medical keywords -> REJECT
+    const isCameraOrPersonalPhoto = nonMedicalPatterns.some((pattern) => name.includes(pattern));
+    if (isCameraOrPersonalPhoto || !hasMedicalKeyword) {
       return false;
     }
-    return true;
+
+    return false;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +144,7 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
         if (!isMedicalPrescriptionFile(file)) {
           errors.push({
             fileName: file.name,
-            reason: `Image "${file.name}" does not contain valid prescription or medical lab text. Please upload a clear photo of your doctor prescription paper.`,
+            reason: `File "${file.name}" was flagged as a personal photo / non-medical image and REJECTED. Please upload an official doctor prescription paper or select a sample prescription below.`,
           });
         } else {
           const ocrData: OcrAnalysisItem = {
@@ -150,7 +173,9 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
       }
 
       setIsScanning(false);
-    }, 1500);
+      // Reset input value so re-upload works smoothly
+      e.target.value = '';
+    }, 1200);
   };
 
   const toggleSampleRx = (rx: SamplePrescription) => {
@@ -201,13 +226,13 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
           </div>
           <h1>Previous Prescriptions & AI OCR Analysis</h1>
           <p className="subtitle">
-            Upload a prescription photo or paper — our AI will extract diagnosis, active medicines, & dosages!
+            Upload a doctor prescription paper or lab report — our AI will extract diagnosis, active medicines, & dosages!
           </p>
         </div>
 
         {/* Section 1: Upload Photo / File */}
         <div className="rx-section">
-          <h3>📷 Upload Prescription Image or Document (AI OCR Scanner)</h3>
+          <h3>📷 Upload Doctor Prescription Image / Document (AI OCR Scanner)</h3>
           <div className={`upload-dropzone ${invalidErrors.length > 0 ? 'dropzone-error' : ''}`}>
             <input
               type="file"
@@ -221,11 +246,11 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
               <div className="upload-icon">{isScanning ? '🔍' : invalidErrors.length > 0 ? '⚠️' : '📁'}</div>
               <div>
                 {isScanning ? (
-                  <span className="scanning-text">Scanning & Validating Document with AI OCR...</span>
+                  <span className="scanning-text">Analyzing & Validating Prescription with AI OCR...</span>
                 ) : (
                   <>
                     <strong>Tap to Upload Doctor Prescription Image / Document</strong>
-                    <div className="small-text">Supports JPG, PNG, PDF — Real-time AI OCR & Invalid Photo Filter</div>
+                    <div className="small-text">Supports JPG, PNG, PDF — Strictly filters out personal photos & non-medical images</div>
                   </>
                 )}
               </div>
@@ -238,12 +263,21 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
               {invalidErrors.map((err, idx) => (
                 <div key={idx} className="invalid-alert-content">
                   <div className="invalid-alert-title">
-                    🛑 <strong>Invalid Document Detected ({err.fileName})</strong>
+                    🛑 <strong>Invalid Non-Medical Image Rejected ({err.fileName})</strong>
                   </div>
                   <p className="invalid-alert-text">{err.reason}</p>
-                  <label htmlFor="file-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-block', marginTop: '0.5rem' }}>
-                    🔄 Upload Valid Doctor Prescription Paper
-                  </label>
+                  <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.75rem' }}>
+                    <label htmlFor="file-upload" className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                      🔄 Re-upload Doctor Prescription Paper
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setInvalidErrors([])}
+                    >
+                      Dismiss Alert
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
