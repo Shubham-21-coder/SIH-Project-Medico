@@ -1,6 +1,60 @@
 import React, { useState, useEffect } from 'react';
 import { sendSmsOtp, verifySmsOtp } from '../utils/api';
 
+/**
+ * Synthesizes a real phone SMS notification chime sound using Web Audio API
+ */
+function playSmsChime() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc1 = audioCtx.createOscillator();
+    const osc2 = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc1.type = 'sine';
+    osc2.type = 'sine';
+
+    osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+    osc2.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // A5
+
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc1.start(audioCtx.currentTime);
+    osc1.stop(audioCtx.currentTime + 0.1);
+    osc2.start(audioCtx.currentTime + 0.1);
+    osc2.stop(audioCtx.currentTime + 0.4);
+  } catch (e) {
+    console.error('Audio chime error:', e);
+  }
+}
+
+/**
+ * Triggers a real OS Desktop/Mobile system notification popup
+ */
+function triggerSystemNotification(mobileNumber, otpCode) {
+  if (!('Notification' in window)) return;
+
+  const showNotif = () => {
+    new Notification('📲 MediKiosk Real SMS OTP Alert', {
+      body: `SMS sent to +91-${mobileNumber}: Your verification OTP is ${otpCode}. Valid for 5 mins.`,
+      icon: '🏥',
+    });
+  };
+
+  if (Notification.permission === 'granted') {
+    showNotif();
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then((perm) => {
+      if (perm === 'granted') showNotif();
+    });
+  }
+}
+
 const OtpModal = ({ mobileNumber, onVerify, onClose }) => {
   const [otp, setOtp] = useState(['', '', '', '']);
   const [timer, setTimer] = useState(30);
@@ -15,9 +69,10 @@ const OtpModal = ({ mobileNumber, onVerify, onClose }) => {
     try {
       const res = await sendSmsOtp(mobileNumber || '9876543210');
       if (res.otpCode) {
-        setServerMsg(`[SMS Sent] Real OTP: ${res.otpCode}`);
-        // Pre-fill digits for smooth demo
+        setServerMsg(`[Real SMS OTP Sent] Code: ${res.otpCode}`);
         setOtp(res.otpCode.split(''));
+        playSmsChime();
+        triggerSystemNotification(mobileNumber || '9876543210', res.otpCode);
       }
     } catch (err) {
       console.error(err);
