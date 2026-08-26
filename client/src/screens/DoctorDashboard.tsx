@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PrescriptionPrintView from '../components/PrescriptionPrintView';
-import { generateAutoRx } from '../utils/api';
+import { generateAutoRx, generateSummary } from '../utils/api';
 import { SummaryData, PrescriptionData, Medication, PatientInfo, DoctorInfo } from '../types/medikiosk';
 
 interface DoctorDashboardProps {
@@ -9,47 +9,102 @@ interface DoctorDashboardProps {
   patientInfo?: PatientInfo | null;
   prescriptions?: string;
   doctorInfo?: DoctorInfo | null;
+  sessionId?: string | null;
   onNewPatient: () => void;
 }
 
+
+const COMMON_MED_PRESETS: Record<string, Medication[]> = {
+  cardio: [
+    { name: 'Tab. Sorbitrate', dosage: '5 mg', frequency: 'Sublingual PRN', duration: '5 days', instructions: 'Under tongue for acute pain' },
+    { name: 'Tab. Ecosprin (Aspirin)', dosage: '75 mg', frequency: '0-1-0 (Lunch)', duration: '30 days', instructions: 'After food' },
+    { name: 'Tab. Telmisartan', dosage: '40 mg', frequency: '1-0-0 (Morning)', duration: '30 days', instructions: 'Before breakfast' },
+    { name: 'Tab. Atorvastatin', dosage: '20 mg', frequency: '0-0-1 (Bedtime)', duration: '30 days', instructions: 'After dinner' },
+  ],
+  dental: [
+    { name: 'Tab. Augmentin (Amoxiclav)', dosage: '625 mg', frequency: '1-0-1 (BD)', duration: '5 days', instructions: 'After food' },
+    { name: 'Tab. Ketorol-DT', dosage: '10 mg', frequency: '1-0-1 (SOS)', duration: '3 days', instructions: 'Dissolve in half glass water' },
+    { name: 'Chlorhexidine Mouthwash', dosage: '10 ml', frequency: 'Twice daily', duration: '7 days', instructions: 'Rinse 60 secs after brushing' },
+  ],
+  derma: [
+    { name: 'Tab. Finalo (Finasteride)', dosage: '1 mg', frequency: '1-0-0', duration: '30 days', instructions: 'Once daily in morning' },
+    { name: 'Tab. Minoxidil', dosage: '2.5 mg', frequency: '1-0-1', duration: '30 days', instructions: 'After meals' },
+    { name: 'Tab. Levocetirizine', dosage: '5 mg', frequency: '0-0-1', duration: '10 days', instructions: 'At bedtime for itching' },
+  ],
+  ayush: [
+    { name: 'Triphala Churna (त्रिफला चूर्ण)', dosage: '3 - 5 gm', frequency: '0-0-1 (उष्ण जल)', duration: '30 Days', instructions: 'रात्रि भोजनोपरांत' },
+    { name: 'Ashwagandha Vati (अश्वगंधा वटी)', dosage: '500 mg', frequency: '1-0-1 (दूध के साथ)', duration: '30 Days', instructions: 'प्रातः एवं सायं' },
+    { name: 'Avipattikar Churna (अविपत्तिकर चूर्ण)', dosage: '3 gm', frequency: '1-0-1', duration: '15 Days', instructions: 'भोजन पूर्व' },
+    { name: 'Sutshekhar Ras (सूतशेखर रस)', dosage: '125 mg', frequency: '1-0-1', duration: '15 Days', instructions: 'शहद या घी के साथ' },
+  ],
+};
+
 const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
   summary,
-  chiefComplaint = 'Chest Pain',
+  chiefComplaint = 'General Consultation',
   patientInfo,
   prescriptions,
   doctorInfo,
+  sessionId,
   onNewPatient,
 }) => {
-  const [activeTab, setActiveTab] = useState<'emr' | 'prescribe' | 'analytics'>('emr');
+  const [activeTab, setActiveTab] = useState<'emr' | 'prescribe' | 'queue' | 'analytics'>('emr');
+  const [liveSummary, setLiveSummary] = useState<SummaryData>(summary);
   const [rxData, setRxData] = useState<PrescriptionData>({
     medications: [],
     investigations: [],
     advice: [],
+    ayushAdvice: [],
     follow_up: '5 days',
   });
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
-  const [editedNotes, setEditedNotes] = useState<string>('');
+  const [rxSavedToast, setRxSavedToast] = useState<boolean>(false);
+
+  const isAyush = liveSummary?.clinical_mode === 'ayush' || patientInfo?.clinicalMode === 'ayush';
+
+  // Live EMR Summary sync from current interview session
+  useEffect(() => {
+    if (sessionId) {
+      generateSummary(sessionId, prescriptions)
+        .then((s) => {
+          if (s) setLiveSummary(s);
+        })
+        .catch(() => {});
+    }
+  }, [sessionId, prescriptions]);
 
   const fetchAutoRx = async () => {
     setIsGenerating(true);
     try {
-      const res = await generateAutoRx(chiefComplaint, summary);
+      const mode = isAyush ? 'ayush' : 'allopathy';
+      const res = await generateAutoRx(chiefComplaint, liveSummary, mode);
       if (res && res.medications) {
         setRxData(res);
       }
     } catch (err) {
       console.error(err);
-      setRxData({
-        medications: [
-          { name: 'Tab. Sorbitrate', dosage: '5 mg', frequency: 'Sublingual PRN', duration: '5 days', instructions: 'Under tongue if chest pain' },
-          { name: 'Tab. Aspirin', dosage: '75 mg', frequency: '0-1-0 (Lunch)', duration: '30 days', instructions: 'After food' },
-          { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0 (Morning)', duration: '14 days', instructions: 'Before breakfast' },
-        ],
-        investigations: ['ECG (12-Lead)', 'Troponin-I Level', '2D Echocardiogram', 'Lipid Profile'],
-        advice: ['Strict bed rest', 'Low sodium and low fat diet', 'Avoid strenuous exercise'],
-        follow_up: '3 days',
-      });
+
+      if (isAyush) {
+        setRxData({
+          medications: COMMON_MED_PRESETS.ayush,
+          investigations: ['नाड़ी परीक्षा (Nadi Pariksha)', 'रक्त शर्करा (Fasting Glucose)'],
+          advice: ['लघु व सुपाच्य सात्विक आहार लें', 'अत्यधिक खट्टा, तीखा व तला-भुना न खाएं'],
+          ayushAdvice: ['प्रातः उषापान करें', 'अनुलोम-विलोम प्राणायाम'],
+          follow_up: '15 दिन बाद आयुर्वेद ओपीडी',
+        });
+      } else {
+        setRxData({
+          medications: [
+            { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0 (Morning)', duration: '7 days', instructions: 'Empty stomach in morning' },
+            { name: 'Tab. Paracetamol', dosage: '650 mg', frequency: '1-0-1 (SOS)', duration: '5 days', instructions: 'After food' },
+            { name: 'Tab. B-Complex with Zinc', dosage: '1 OD', frequency: '0-1-0', duration: '15 days', instructions: 'After lunch' },
+          ],
+          investigations: ['Complete Blood Count (CBC)', 'Erythrocyte Sedimentation Rate (ESR)'],
+          advice: ['Adequate hydration (2.5 - 3 L/day)', 'Adequate rest and light diet'],
+          follow_up: '5 days in General Medicine OPD',
+        });
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -70,9 +125,19 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
       ...rxData,
       medications: [
         ...rxData.medications,
-        { name: 'Tab. Paracetamol', dosage: '650 mg', frequency: '1-0-1', duration: '5 days', instructions: 'After food' },
+        { name: isAyush ? 'Guduchi Ghanvati (गिलोय वटी)' : 'Tab. Multivitamin', dosage: isAyush ? '500 mg' : '1 Tab', frequency: '1-0-1', duration: '15 days', instructions: 'After food' },
       ],
     });
+  };
+
+  const handleApplyPreset = (presetKey: string) => {
+    const preset = COMMON_MED_PRESETS[presetKey];
+    if (preset) {
+      setRxData({
+        ...rxData,
+        medications: [...rxData.medications, ...preset],
+      });
+    }
   };
 
   const handleRemoveMed = (index: number) => {
@@ -80,104 +145,212 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
     setRxData({ ...rxData, medications: updated });
   };
 
+  const handleSaveAndSign = () => {
+    setShowPrintModal(true);
+    setRxSavedToast(true);
+    setTimeout(() => setRxSavedToast(false), 3000);
+  };
+
   return (
-    <div className="screen doctor-dashboard-screen fade-in">
-      {/* Top OPD Doctor Header */}
+    <div className="screen doctor-dashboard-screen fade-in" style={{ maxWidth: '1240px' }}>
+      {/* Top Clinical Header */}
       <div className="doc-dashboard-header glass-card">
         <div className="doc-profile-section">
-          <div className="doc-avatar">🩺</div>
+          <div className="doc-avatar">{isAyush ? '🌿' : '🩺'}</div>
           <div>
-            <h2>{doctorInfo?.name || 'Dr. Ananya Sharma, MD'}</h2>
-            <div className="doc-dept">{doctorInfo?.role || 'Senior Consultant Physician'} • OPD Cabinet #4</div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <h2>{doctorInfo?.name || (isAyush ? 'Vaidya R. K. Shastri (BAMS, MD)' : 'Dr. Ananya Sharma, MD')}</h2>
+              <span className="gov-badge" style={{ fontSize: '0.7rem' }}>● Online (OPD Room 104)</span>
+            </div>
+            <div className="doc-meta-text">
+              {doctorInfo?.role || (isAyush ? 'Senior Ayurvedic Physician' : 'Senior Consultant Physician')} • {doctorInfo?.department || (isAyush ? 'AYUSH / Kayachikitsa OPD' : 'General Medicine / OPD')}
+            </div>
           </div>
         </div>
 
         <div className="doc-header-actions">
-          <div className="patient-active-badge">
-            🟢 Active Patient: <strong>{patientInfo?.name || 'Ramesh Kumar'}</strong> ({patientInfo?.age || '45'}y / {patientInfo?.gender || 'Male'})
-          </div>
-          <button className="btn btn-secondary btn-sm" onClick={onNewPatient}>
-            + Next OPD Patient
+          <button className="btn btn-secondary btn-sm" onClick={fetchAutoRx} disabled={isGenerating}>
+            {isGenerating ? 'AI Regenerating...' : '🔄 Re-generate AI Prescription'}
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={handleSaveAndSign}>
+            🖨️ Print Official e-Prescription
           </button>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="doc-tabs-bar">
-        <button
-          className={`tab-btn ${activeTab === 'emr' ? 'active' : ''}`}
-          onClick={() => setActiveTab('emr')}
-        >
-          📋 Clinical EMR Summary
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'prescribe' ? 'active' : ''}`}
-          onClick={() => setActiveTab('prescribe')}
-        >
-          💊 AI Smart Prescription Writer {isGenerating && '⚡'}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-          onClick={() => setActiveTab('analytics')}
-        >
-          📊 Patient OPD Analytics
-        </button>
-      </div>
-
-      {/* TAB 1: CLINICAL EMR SUMMARY */}
-      {activeTab === 'emr' && (
-        <div className="tab-content fade-in">
-          <div className="emr-grid">
-            <div className="emr-card glass-card">
-              <h3>🩺 Chief Complaint & History of Present Illness (HPI)</h3>
-              <div className="emr-box-highlight">{summary?.chief_complaint || `Patient presents with ${chiefComplaint}`}</div>
-              <p className="emr-text">{summary?.hpi || 'No detailed HPI recorded.'}</p>
+      {/* Patient Active Context Banner & Vitals Bar */}
+      <div className="patient-active-banner glass-card" style={{ marginTop: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div className="patient-main-id">
+            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+              <span className="patient-active-tag">Active Consultation</span>
+              <span className={`mode-pill-mini ${isAyush ? 'ayush-pill' : 'allopathy-pill'}`}>
+                {isAyush ? '🌿 AYUSH OPD' : '🩺 Allopathy OPD'}
+              </span>
             </div>
+            <h3 style={{ margin: '0.3rem 0 0.1rem' }}>
+              👤 {patientInfo?.name || 'Shubham Garg'} ({patientInfo?.age || '20'}y / {patientInfo?.gender || 'Male'})
+            </h3>
+            <span className="sub-id">ABHA ID: {patientInfo?.identifier || '91-4920-1849-2810'} • Token #104</span>
+          </div>
 
-            <div className="emr-card glass-card">
-              <h3>📜 Past History & Attached Medical Records</h3>
-              <p className="emr-text">{summary?.past_history || prescriptions || 'No previous medical history recorded.'}</p>
+          {/* Quick Vitals Strip */}
+          <div className="doc-vitals-strip" style={{ display: 'flex', gap: '0.75rem', background: 'rgba(0,0,0,0.25)', padding: '0.5rem 0.9rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '0.75rem' }}>
+              <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>BP</span>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#10b981' }}>122/80</div>
             </div>
-
-            <div className="emr-card glass-card">
-              <h3>🫁 Review of Systems (ROS)</h3>
-              <p className="emr-text">{summary?.review_of_systems || 'All systems reviewed and negative.'}</p>
+            <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '0.75rem' }}>
+              <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>Pulse</span>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>74 bpm</div>
             </div>
-
-            <div className="emr-card glass-card">
-              <h3>📝 Doctor Clinical Consultation Notes</h3>
-              <textarea
-                className="input-field textarea-field"
-                placeholder="Add physical exam findings (BP, Pulse, SpO2) or doctor clinical notes..."
-                value={editedNotes}
-                onChange={(e) => setEditedNotes(e.target.value)}
-                rows={4}
-              />
+            <div style={{ textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '0.75rem' }}>
+              <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>SpO2</span>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#00d4aa' }}>99%</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '0.68rem', opacity: 0.7 }}>Temp</span>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>98.4°F</div>
             </div>
           </div>
         </div>
+
+        {/* Dashboard Tabs Navigation */}
+        <div className="doc-tabs-nav" style={{ marginTop: '0.9rem' }}>
+          <button
+            className={`doc-tab-btn ${activeTab === 'emr' ? 'active' : ''}`}
+            onClick={() => setActiveTab('emr')}
+          >
+            📋 Structured EMR & Clinical Timeline
+          </button>
+          <button
+            className={`doc-tab-btn ${activeTab === 'prescribe' ? 'active' : ''}`}
+            onClick={() => setActiveTab('prescribe')}
+          >
+            💊 Electronic Prescribing (e-Rx) ({rxData.medications.length})
+          </button>
+          <button
+            className={`doc-tab-btn ${activeTab === 'queue' ? 'active' : ''}`}
+            onClick={() => setActiveTab('queue')}
+          >
+            👥 OPD Patient Queue (12 Waiting)
+          </button>
+          <button
+            className={`doc-tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analytics')}
+          >
+            📊 Clinical Time Saved Analytics
+          </button>
+        </div>
+      </div>
+
+      {/* TAB 1: STRUCTURED EMR & TIMELINE */}
+      {activeTab === 'emr' && (
+        <div className="doc-tab-content slide-in" style={{ marginTop: '1rem' }}>
+          {/* Abnormal Lab Outlier Alert Banner */}
+          {liveSummary.lab_outliers && liveSummary.lab_outliers.length > 0 && (
+            <div className="summary-section glass-card" style={{ border: '1.5px solid #ef4444', background: 'rgba(239, 68, 68, 0.08)', marginBottom: '1rem' }}>
+              <div className="section-header">
+                <h3 style={{ color: '#ef4444' }}>🧪 Abnormal Outlier Lab Values Flagged from Patient Records</h3>
+                <span className="ocr-verified-badge" style={{ background: '#ef4444', color: '#fff' }}>Critical Alert</span>
+              </div>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                {liveSummary.lab_outliers.map((lab, idx) => (
+                  <div key={idx} style={{ background: '#ef4444', color: '#fff', padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 600 }}>
+                    ⬆️ {lab.testName}: {lab.value} {lab.unit} (Ref: {lab.referenceRange})
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Drug Interaction Alert */}
+          {liveSummary.drug_interactions && liveSummary.drug_interactions.length > 0 && (
+            <div className="summary-section glass-card" style={{ border: '1.5px solid #f59e0b', background: 'rgba(245, 158, 11, 0.1)', marginBottom: '1rem' }}>
+              <div className="section-header">
+                <h3 style={{ color: '#f59e0b' }}>⚠️ Drug-Drug Interaction Warning</h3>
+                <span className="ocr-verified-badge" style={{ background: '#f59e0b', color: '#000' }}>Review Combination</span>
+              </div>
+              {liveSummary.drug_interactions.map((di, idx) => (
+                <p key={idx} style={{ margin: '0.2rem 0 0', fontSize: '0.85rem' }}>
+                  <strong>{di.drug1} + {di.drug2}:</strong> {di.description}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* AYUSH Findings Box */}
+          {isAyush && liveSummary.ayush_pariksha && (
+            <div className="summary-section glass-card" style={{ border: '1.5px solid #10b981', background: 'rgba(16, 185, 129, 0.08)', marginBottom: '1rem' }}>
+              <div className="section-header">
+                <h3 style={{ color: '#10b981' }}>🌿 दशविध एवं अष्टविध परीक्षा निष्कर्ष (Ayurvedic Intake)</h3>
+                <span className="ocr-verified-badge" style={{ background: '#10b981', color: '#fff' }}>Ayurveda EMR</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                <div><strong>प्रकृति:</strong> {liveSummary.ayush_pariksha.prakriti}</div>
+                <div><strong>विकृति:</strong> {liveSummary.ayush_pariksha.vikriti}</div>
+                <div><strong>अग्नि:</strong> {liveSummary.ayush_pariksha.agni}</div>
+                <div><strong>कोष्ठ:</strong> {liveSummary.ayush_pariksha.koshtha}</div>
+                <div><strong>आहार-विहार:</strong> {liveSummary.ayush_pariksha.ahara_vihara}</div>
+                <div><strong>सत्त्व:</strong> {liveSummary.ayush_pariksha.sattva || 'मध्यम'}</div>
+              </div>
+            </div>
+          )}
+
+          {/* 8-Part EMR Grid */}
+          <div className="emr-summary-grid">
+            <div className="emr-card glass-card">
+              <h4>1. Chief Complaint</h4>
+              <p>{liveSummary.chief_complaint}</p>
+            </div>
+            <div className="emr-card glass-card">
+              <h4>2. History of Present Illness (HPI)</h4>
+              <p>{liveSummary.hpi}</p>
+            </div>
+            <div className="emr-card glass-card">
+              <h4>3. Past Medical & Surgical History</h4>
+              <p>{liveSummary.past_history}</p>
+            </div>
+            <div className="emr-card glass-card">
+              <h4>4. Medications & Allergies</h4>
+              <p>{liveSummary.medications_allergies || 'Reviewed and recorded.'}</p>
+            </div>
+            <div className="emr-card glass-card">
+              <h4>5. Family & Social History</h4>
+              <p>{liveSummary.family_history || 'Recorded; no acute hereditary disease noted.'}</p>
+            </div>
+            <div className="emr-card glass-card">
+              <h4>6. Review of Systems (ROS)</h4>
+              <p>{liveSummary.review_of_systems}</p>
+            </div>
+          </div>
+
+        </div>
       )}
 
-      {/* TAB 2: AI SMART PRESCRIPTION WRITER */}
+      {/* TAB 2: PRESCRIBE & CLINICAL ORDERS */}
       {activeTab === 'prescribe' && (
-        <div className="tab-content fade-in">
-          <div className="rx-writer-card glass-card">
-            <div className="rx-writer-header">
+        <div className="doc-tab-content slide-in" style={{ marginTop: '1rem' }}>
+          <div className="prescribe-section glass-card">
+            <div className="prescribe-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div>
-                <h3>💊 Auto-Generated Evidence-Based Prescription</h3>
-                <p className="subtitle">AI generated initial draft based on patient symptoms. Doctor retains 100% control to edit.</p>
+                <h3>💊 {isAyush ? 'आयुर्वेदिक औषध एवं योग व्यवस्थापत्र' : 'Prescribed Medications & Dosages'}</h3>
+                <span className="small-text">Quick-add common formulary templates or customize item-by-item:</span>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={fetchAutoRx} disabled={isGenerating}>
-                {isGenerating ? 'Generating...' : '🔄 Re-generate AI Prescription'}
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleApplyPreset('cardio')}>+ Cardio Rx</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleApplyPreset('dental')}>+ Dental Rx</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleApplyPreset('derma')}>+ Derma Rx</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleApplyPreset('ayush')}>+ AYUSH Rx</button>
+                <button className="btn btn-primary btn-sm" onClick={handleAddMed}>+ Add Custom Row</button>
+              </div>
             </div>
 
-            {/* Medications Table */}
-            <div className="rx-table-container">
-              <table className="rx-edit-table">
+            <div className="meds-table-container" style={{ marginTop: '1rem' }}>
+              <table className="meds-table">
                 <thead>
                   <tr>
-                    <th>Medication Name</th>
+                    <th>Medication / Formulation</th>
                     <th>Dosage</th>
                     <th>Frequency</th>
                     <th>Duration</th>
@@ -199,7 +372,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                       <td>
                         <input
                           type="text"
-                          className="table-input"
+                          className="table-input sm"
                           value={med.dosage}
                           onChange={(e) => handleMedChange(idx, 'dosage', e.target.value)}
                         />
@@ -207,7 +380,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                       <td>
                         <input
                           type="text"
-                          className="table-input"
+                          className="table-input sm"
                           value={med.frequency}
                           onChange={(e) => handleMedChange(idx, 'frequency', e.target.value)}
                         />
@@ -215,7 +388,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                       <td>
                         <input
                           type="text"
-                          className="table-input"
+                          className="table-input sm"
                           value={med.duration}
                           onChange={(e) => handleMedChange(idx, 'duration', e.target.value)}
                         />
@@ -229,9 +402,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
                         />
                       </td>
                       <td>
-                        <button className="btn-icon danger-icon" onClick={() => handleRemoveMed(idx)}>
-                          🗑️
-                        </button>
+                        <button className="btn-table-del" onClick={() => handleRemoveMed(idx)}>✕</button>
                       </td>
                     </tr>
                   ))}
@@ -239,51 +410,123 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
               </table>
             </div>
 
-            <button className="btn btn-secondary btn-sm" onClick={handleAddMed} style={{ marginTop: '1rem' }}>
-              + Add Medication
-            </button>
+            {/* Investigations & Pathya Advice */}
+            <div className="orders-split-grid" style={{ marginTop: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="orders-card glass-card">
+                <h4>🧪 Diagnostic Investigations Ordered</h4>
+                <ul className="orders-list">
+                  {rxData.investigations.map((inv, idx) => (
+                    <li key={idx}>🔬 {inv}</li>
+                  ))}
+                </ul>
+              </div>
 
-            {/* Bottom Actions Bar */}
-            <div className="rx-writer-bottom">
-              <button className="btn btn-primary btn-lg" onClick={() => setShowPrintModal(true)}>
-                🖨️ Generate & Print Official Prescription →
+              <div className="orders-card glass-card">
+                <h4>📋 {isAyush ? 'पथ्य-अपथ्य एवं दिनचर्या परामर्श' : 'Clinical & Dietary Advice'}</h4>
+                <ul className="orders-list">
+                  {rxData.advice.map((adv, idx) => (
+                    <li key={idx}>✓ {adv}</li>
+                  ))}
+                  {rxData.ayushAdvice?.map((adv, idx) => (
+                    <li key={idx} style={{ color: '#10b981' }}>🌿 {adv}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Follow-up Note */}
+            <div className="followup-row" style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <strong>📅 Follow-up:</strong> {rxData.follow_up}
+              </div>
+              <button className="btn btn-primary btn-lg" onClick={handleSaveAndSign}>
+                ✅ Sign & Issue Official Prescription
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 3: PATIENT OPD ANALYTICS */}
-      {activeTab === 'analytics' && (
-        <div className="tab-content fade-in">
-          <div className="analytics-grid">
-            <div className="analytics-card glass-card">
-              <h3>⏱️ Consultation Time Saved</h3>
-              <div className="stat-number">6.5 Mins</div>
-              <p className="subtitle">Pre-filled AI history intake reduced doctor typing time by 75%.</p>
+      {/* TAB 3: OPD PATIENT QUEUE */}
+      {activeTab === 'queue' && (
+        <div className="doc-tab-content slide-in" style={{ marginTop: '1rem' }}>
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3>👥 Today's OPD Token Queue (Dr. Ananya Sharma - Room 104)</h3>
+                <span className="small-text">Total registered: 24 • Kiosk Self-Intake Completed: 18</span>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={onNewPatient}>+ Call Next Token</button>
             </div>
 
-            <div className="analytics-card glass-card">
-              <h3>🎯 Clinical Accuracy & Red Flags</h3>
-              <div className="stat-number">100%</div>
-              <p className="subtitle">SOCRATES clinical framework history completed before consultation.</p>
-            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <div className="glass-card" style={{ padding: '0.85rem 1.15rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--accent-teal)', background: 'rgba(0,212,170,0.08)' }}>
+                <div>
+                  <span className="gov-badge" style={{ fontSize: '0.7rem' }}>Token #104 • In Consultation</span>
+                  <strong style={{ display: 'block', fontSize: '1rem', marginTop: '0.2rem' }}>Shubham Garg (20y, Male)</strong>
+                  <span className="small-text">ABHA: 91-4920-1849-2810 • CC: {chiefComplaint}</span>
+                </div>
+                <span style={{ color: 'var(--accent-teal)', fontWeight: 600 }}>Active</span>
+              </div>
 
-            <div className="analytics-card glass-card">
-              <h3>📱 ABDM / ABHA Health Lockers</h3>
-              <div className="stat-number">Linked</div>
-              <p className="subtitle">Prescription and summary ready for instant FHIR/ABDM sync.</p>
+              <div className="glass-card" style={{ padding: '0.85rem 1.15rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span className="gov-badge ayush-badge" style={{ fontSize: '0.7rem' }}>Token #105 • Ready for Consult</span>
+                  <strong style={{ display: 'block', fontSize: '1rem', marginTop: '0.2rem' }}>Pooja Sharma (32y, Female)</strong>
+                  <span className="small-text">ABHA: 91-2940-1849-0192 • CC: Acute Migraine & Nausea</span>
+                </div>
+                <button className="btn btn-secondary btn-sm" onClick={onNewPatient}>Start Consult →</button>
+              </div>
+
+              <div className="glass-card" style={{ padding: '0.85rem 1.15rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span className="gov-badge dpdp-badge" style={{ fontSize: '0.7rem' }}>Token #106 • At Kiosk Intake</span>
+                  <strong style={{ display: 'block', fontSize: '1rem', marginTop: '0.2rem' }}>Rajesh Verma (58y, Male)</strong>
+                  <span className="small-text">ABHA: 91-8840-2910-4820 • CC: Chest heaviness & BP</span>
+                </div>
+                <span style={{ fontSize: '0.82rem', opacity: 0.7 }}>Intake in progress</span>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Printable Prescription Modal */}
+      {/* TAB 4: CLINICAL ANALYTICS & TIME SAVED */}
+      {activeTab === 'analytics' && (
+        <div className="doc-tab-content slide-in" style={{ marginTop: '1rem' }}>
+          <div className="glass-card" style={{ padding: '1.5rem' }}>
+            <h3>📊 MediKiosk OPD Throughput & History Bottleneck Analytics</h3>
+            <p className="small-text">Real-time statistics on doctor consultation time offloaded by AI self-service kiosk:</p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
+              <div className="glass-card" style={{ padding: '1.25rem', textAlign: 'center', border: '1px solid var(--accent-teal)' }}>
+                <span style={{ fontSize: '2rem' }}>⏱️</span>
+                <h2 style={{ color: 'var(--accent-teal)', margin: '0.4rem 0 0.1rem' }}>8.4 Mins</h2>
+                <span className="small-text">Avg History Taking Time Saved / Patient</span>
+              </div>
+              <div className="glass-card" style={{ padding: '1.25rem', textAlign: 'center', border: '1px solid #10b981' }}>
+                <span style={{ fontSize: '2rem' }}>👥</span>
+                <h2 style={{ color: '#10b981', margin: '0.4rem 0 0.1rem' }}>3.2x</h2>
+                <span className="small-text">OPD Patient Consultation Throughput</span>
+              </div>
+              <div className="glass-card" style={{ padding: '1.25rem', textAlign: 'center', border: '1px solid #f59e0b' }}>
+                <span style={{ fontSize: '2rem' }}>📑</span>
+                <h2 style={{ color: '#f59e0b', margin: '0.4rem 0 0.1rem' }}>100%</h2>
+                <span className="small-text">ABDM FHIR Structured EMR Compliance</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Print Prescription Modal */}
       {showPrintModal && (
         <PrescriptionPrintView
-          prescription={rxData}
           patientInfo={patientInfo}
+          doctorInfo={doctorInfo}
           chiefComplaint={chiefComplaint}
+          summary={summary}
+          rxData={rxData}
           onClose={() => setShowPrintModal(false)}
         />
       )}

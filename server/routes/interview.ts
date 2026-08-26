@@ -1,19 +1,19 @@
 import { Router, Request, Response } from 'express';
-import { createSession, getSession, updateSession } from '../sessions.js';
+import { createSession, getSession, updateSession, deleteSession } from '../sessions.js';
 import { getNextQuestion, generateSummary, generateAutoPrescription } from '../services/llm.js';
+import { generateAbdmFhirBundle } from '../services/fhir.js';
 
 const router = Router();
 
 router.post('/start', async (req: Request, res: Response) => {
   try {
-    const { language, chiefComplaint, patientInfo, prescriptions } = req.body;
-    if (!chiefComplaint) {
-      return res.status(400).json({ error: 'Chief complaint is required' });
-    }
+    const { language, chiefComplaint, patientInfo, prescriptions, clinicalMode } = req.body;
+    const complaint = chiefComplaint || (clinicalMode === 'ayush' ? 'आयुर्वेदिक ओपीडी' : 'general');
+    const mode = clinicalMode === 'ayush' ? 'ayush' : 'allopathy';
 
-    const session = createSession(language || 'en', chiefComplaint, patientInfo, prescriptions);
+    const session = createSession(language || 'en', complaint, patientInfo, prescriptions, mode);
+    const response = await getNextQuestion(complaint, [], mode);
 
-    const response = await getNextQuestion(chiefComplaint, []);
     session.currentQuestion = response.next_question;
 
     res.json({
@@ -21,10 +21,11 @@ router.post('/start', async (req: Request, res: Response) => {
       question: {
         next_question: response.next_question,
         suggested_replies: response.suggested_replies,
+        ayush_category: response.ayush_category,
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error('Failed to start interview:', error);
     res.status(500).json({ error: 'Failed to start interview' });
   }
 });
@@ -32,7 +33,7 @@ router.post('/start', async (req: Request, res: Response) => {
 router.post('/next', async (req: Request, res: Response) => {
   try {
     const { sessionId, answer } = req.body;
-    if (!sessionId || !answer) {
+    if (!sessionId || answer === undefined) {
       return res.status(400).json({ error: 'Session ID and answer are required' });
     }
 
@@ -43,7 +44,7 @@ router.post('/next', async (req: Request, res: Response) => {
 
     session.history.push({ q: session.currentQuestion || '', a: answer });
 
-    const response = await getNextQuestion(session.chiefComplaint, session.history);
+    const response = await getNextQuestion(session.chiefComplaint, session.history, session.clinicalMode);
 
     if (response.red_flag) {
       updateSession(sessionId, { redFlag: true, redFlagReason: response.red_flag_reason });
@@ -53,7 +54,7 @@ router.post('/next', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error) {
-    console.error(error);
+    console.error('Failed to get next question:', error);
     res.status(500).json({ error: 'Failed to get next question' });
   }
 });
@@ -75,23 +76,55 @@ router.post('/summary', async (req: Request, res: Response) => {
       session.chiefComplaint,
       session.history,
       session.patientInfo,
-      activePrescriptions
+      activePrescriptions,
+      session.clinicalMode
     );
     res.json(summary);
   } catch (error) {
-    console.error(error);
+    console.error('Failed to generate summary:', error);
     res.status(500).json({ error: 'Failed to generate summary' });
   }
 });
 
 router.post('/auto-rx', async (req: Request, res: Response) => {
   try {
-    const { chiefComplaint, summary } = req.body;
-    const autoRx = await generateAutoPrescription(chiefComplaint || 'Chest Pain', summary);
+    const { chiefComplaint, summary, clinicalMode } = req.body;
+    const mode = clinicalMode === 'ayush' ? 'ayush' : 'allopathy';
+    const autoRx = await generateAutoPrescription(chiefComplaint || 'Clinical OPD', summary, mode);
     res.json(autoRx);
   } catch (error) {
-    console.error(error);
+    console.error('Failed to generate auto-prescription:', error);
     res.status(500).json({ error: 'Failed to generate auto-prescription' });
+  }
+});
+
+router.post('/fhir-bundle', async (req: Request, res: Response) => {
+  try {
+    const { patientInfo, chiefComplaint, summaryData, prescriptionsData } = req.body;
+    const bundle = generateAbdmFhirBundle(patientInfo, chiefComplaint, summaryData, prescriptionsData);
+    res.json({
+      success: true,
+      message: 'FHIR R4 Document Bundle generated successfully for ABDM Health Repository',
+      bundle,
+    });
+  } catch (error) {
+    console.error('Failed to generate FHIR bundle:', error);
+    res.status(500).json({ error: 'Failed to generate FHIR bundle' });
+  }
+});
+
+router.post('/purge-session', (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.body;
+    if (sessionId) {
+      deleteSession(sessionId);
+    }
+    res.json({
+      success: true,
+      message: 'DPDP Act 2023: Temporary kiosk session memory cleared.',
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to purge session' });
   }
 });
 

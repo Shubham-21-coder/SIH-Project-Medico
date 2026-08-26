@@ -15,9 +15,10 @@ import {
   startInterview,
   getNextQuestion,
   generateSummary,
+  purgeKioskSession,
 } from './utils/api';
 
-import { PatientInfo, SummaryData, LLMQuestionResponse, DoctorInfo } from './types/medikiosk';
+import { PatientInfo, SummaryData, LLMQuestionResponse, DoctorInfo, ClinicalMode } from './types/medikiosk';
 
 type AppStep =
   | 'welcome'
@@ -31,16 +32,18 @@ type AppStep =
 
 export default function App() {
   const [mode, setMode] = useState<'kiosk' | 'doctor'>('kiosk');
-  const [currentStep, setCurrentStep] = useState<AppStep>('login');
+  const [currentStep, setCurrentStep] = useState<AppStep>('welcome');
 
   // Intake State
-  const [language, setLanguage] = useState<string>('en');
-  const [chiefComplaint, setChiefComplaint] = useState<string>('Chest Pain');
+  const [language, setLanguage] = useState<string>('hi');
+  const [clinicalMode, setClinicalMode] = useState<ClinicalMode>('allopathy');
+  const [chiefComplaint, setChiefComplaint] = useState<string>('General Consultation');
   const [patientInfo, setPatientInfo] = useState<PatientInfo | null>({
     name: 'Shubham Garg',
-    age: '18',
+    age: '20',
     gender: 'Male',
-    identifier: '9876543210',
+    identifier: '91-4920-1849-2810',
+    clinicalMode: 'allopathy',
     isGuest: false,
   });
   const [prescriptions, setPrescriptions] = useState<string>('');
@@ -57,7 +60,7 @@ export default function App() {
     id: 'DOC-101',
     name: 'Dr. Ananya Sharma',
     role: 'Senior Consultant Physician',
-    department: 'Cardiology / OPD',
+    department: 'General Medicine / OPD',
   });
 
   // Toast Notification State
@@ -71,40 +74,62 @@ export default function App() {
 
   const getActiveSummary = (): SummaryData => {
     if (summaryData) return summaryData;
+    if (clinicalMode === 'ayush') {
+      return {
+        clinical_mode: 'ayush',
+        chief_complaint: `आयुर्वेदिक ओपीडी परामर्श: ${chiefComplaint || 'स्वास्थ्य परीक्षण व वात-पित्त-कफ असंतुलन'}`,
+        hpi: `रोगी (${patientInfo?.name || 'Shubham Garg'}, ${patientInfo?.age || '20'} वर्ष / ${patientInfo?.gender || 'पुरुष'}) द्वारा दशविध परीक्षा विवरण: वात-पित्तज प्रकृति, मंदाग्नि, मध्यम कोष्ठ।`,
+        past_history: prescriptions ? `पूर्व औषध एवं उपचार विवरण:\n${prescriptions}` : 'पूर्व में कोई दीर्घकालिक औषधि इतिहास नहीं।',
+        medications_allergies: 'औषध सात्म्यता: कोई ज्ञात औषधि एलर्जी नहीं। त्रिफला/पाचन योग पूर्व में प्रयुक्त।',
+        review_of_systems: 'अग्नि: मंदाग्नि लक्षित। कोष्ठ: मध्यम। धातु सारता एवं सत्त्व मध्यम।',
+        ayush_pariksha: {
+          prakriti: 'वात-पित्तज प्रकृति (Vata-Pitta Prakriti)',
+          vikriti: 'समान वात एवं पाचक पित्त दृष्टि (Vata-Pitta Imbalance)',
+          agni: 'मंदाग्नि (Low Digestive Agni)',
+          koshtha: 'मध्यम कोष्ठ (Moderate Bowel Habit)',
+          ahara_vihara: 'कटु-अम्ल रस प्रधान आहार, रात्रि जागरण एवं मानसिक तनाव',
+          sara: 'मध्यम रस-रक्त सारता',
+          samhanana: 'मध्यम संहनन',
+          sattva: 'मध्यम सत्त्व',
+        },
+      };
+    }
+
     return {
-      chief_complaint: `Patient (${patientInfo?.name || 'Shubham Garg'}) presents for OPD Consultation (${chiefComplaint || 'Skin & General OPD'})`,
-      hpi: `Patient (${patientInfo?.name || 'Shubham Garg'}, ${patientInfo?.age || '18'}y/${patientInfo?.gender || 'Male'}) checked in via MediKiosk OPD Portal. ${prescriptions ? 'Uploaded active prescription records.' : 'Symptom intake completed.'}`,
+      clinical_mode: 'allopathy',
+      chief_complaint: `Patient (${patientInfo?.name || 'Shubham Garg'}) presents for OPD Consultation (${chiefComplaint || 'General OPD'})`,
+      hpi: `Patient (${patientInfo?.name || 'Shubham Garg'}, ${patientInfo?.age || '20'}y/${patientInfo?.gender || 'Male'}) checked in via MediKiosk OPD Portal. ${prescriptions ? 'Uploaded active prescription records.' : 'Symptom intake completed.'}`,
       past_history: prescriptions ? `Attached Previous Prescriptions & Records:\n${prescriptions}` : 'No past prescription documents uploaded.',
-      review_of_systems: 'Dermatological, Cardiovascular & Respiratory: Pertinent findings noted. Other systems reviewed and negative.',
+      review_of_systems: 'Cardiovascular, Respiratory & Gastrointestinal: Pertinent findings noted. Other systems reviewed and negative.',
     };
   };
 
-  // STEP 1: Language & Complaint Selection
-  const handleWelcomeStart = (selectedLang: string, selectedComplaint: string) => {
+  // STEP 1: Language, Department & Mode Selection
+  const handleWelcomeStart = (selectedLang: string, selectedComplaint: string, mode: ClinicalMode) => {
     setLanguage(selectedLang);
     setChiefComplaint(selectedComplaint);
+    setClinicalMode(mode);
     setCurrentStep('login');
   };
 
-  // STEP 2: Patient Registration & Phone Verification
+  // STEP 2: Patient Registration & ABHA / Phone Verification
   const handleLoginSubmit = (info: PatientInfo) => {
-    setPatientInfo(info);
+    setPatientInfo({ ...info, clinicalMode });
     setCurrentStep('prescriptions');
-    showToast(`Welcome ${info.name}! Phone verified.`, 'success');
+    showToast(`Welcome ${info.name}! ABHA verified.`, 'success');
   };
 
-  // STEP 3: Prescriptions & Past Records
+  // STEP 3: Prescriptions & Past Document Digitization
   const handlePrescriptionsNext = async (prescriptionsText: string) => {
     setPrescriptions(prescriptionsText);
     setCurrentStep('loading');
 
     try {
-      const data = await startInterview(language, chiefComplaint, patientInfo, prescriptionsText);
+      const data = await startInterview(language, chiefComplaint, patientInfo, prescriptionsText, clinicalMode);
       setSessionId(data.sessionId);
       setInitialQuestionData(data.question);
       setCurrentStep('interview');
     } catch (err: any) {
-      // Fallback to Doctor View directly if server offline
       showToast('Interview session initiated.', 'info');
       setCurrentStep('interview');
     }
@@ -113,7 +138,6 @@ export default function App() {
   // STEP 4: Interview Question & Answer Processing
   const handleAnswerSubmit = async (answerText: string): Promise<LLMQuestionResponse> => {
     if (!sessionId) {
-      // Offline fallback
       return {
         next_question: 'Thank you. Clinical interview complete.',
         suggested_replies: [],
@@ -124,14 +148,12 @@ export default function App() {
     try {
       const response = await getNextQuestion(sessionId, answerText);
 
-      // Check Red Flag Alert
       if (response.red_flag) {
         setRedFlagReason(response.red_flag_reason || 'Severe emergency indicators detected');
         setCurrentStep('red_flag');
         return response;
       }
 
-      // Check Interview Complete
       if (response.interview_complete) {
         setCurrentStep('loading');
         try {
@@ -176,12 +198,16 @@ export default function App() {
   };
 
   const handleReset = () => {
-    setPatientInfo({ name: 'Shubham Garg', age: '18', gender: 'Male', identifier: '9876543210' });
+    if (sessionId) {
+      purgeKioskSession(sessionId).catch(() => {});
+    }
+    setPatientInfo({ name: 'Shubham Garg', age: '20', gender: 'Male', identifier: '91-4920-1849-2810', clinicalMode: 'allopathy' });
     setPrescriptions('');
     setSessionId(null);
     setInitialQuestionData(null);
     setRedFlagReason(null);
     setSummaryData(null);
+    setClinicalMode('allopathy');
     setCurrentStep('welcome');
   };
 
@@ -204,7 +230,7 @@ export default function App() {
           <LoginScreen
             onSubmit={handleLoginSubmit}
             onSkip={() => {
-              setPatientInfo({ name: 'Shubham Garg', age: '18', gender: 'Male', identifier: '9876543210', isGuest: false });
+              setPatientInfo({ name: 'Shubham Garg', age: '20', gender: 'Male', identifier: '91-4920-1849-2810', clinicalMode, isGuest: false });
               setCurrentStep('prescriptions');
             }}
           />
@@ -220,8 +246,16 @@ export default function App() {
 
         {currentStep === 'interview' && (
           <InterviewScreen
-            initialQuestion={initialQuestionData || { next_question: 'What symptoms are you experiencing today?', suggested_replies: ['Chest pain', 'Hair loss', 'Fever', 'Skin rash'] }}
+            initialQuestion={initialQuestionData || {
+              next_question: clinicalMode === 'ayush'
+                ? 'नमस्ते! आयुर्वेद ओपीडी में आपका स्वागत है। आपकी शारीरिक प्रकृति और वर्तमान समस्या क्या है?'
+                : 'Hello! What health issue or symptoms are you experiencing today?',
+              suggested_replies: clinicalMode === 'ayush'
+                ? ['वातज (Joint pain / Dry skin)', 'पित्तज (Acidity / Burning)', 'कफज (Weight / Congestion)', 'अन्य']
+                : ['Chest pain', 'Fever', 'Headache', 'Stomach pain', 'Cough / Cold', 'Skin problem', 'Teeth pain', 'Other'],
+            }}
             patientInfo={patientInfo}
+            clinicalMode={clinicalMode}
             onAnswerSubmit={handleAnswerSubmit}
             language={language}
           />
@@ -236,7 +270,7 @@ export default function App() {
         )}
 
         {currentStep === 'loading' && (
-          <LoadingScreen message="Analyzing Symptoms & Generating Clinical Summary..." />
+          <LoadingScreen message="Analyzing Symptoms, Digitisations & Generating ABDM Clinical Note..." />
         )}
 
         {currentStep === 'doctor_summary' && (
@@ -262,6 +296,7 @@ export default function App() {
             patientInfo={patientInfo}
             prescriptions={prescriptions}
             doctorInfo={doctorInfo}
+            sessionId={sessionId}
             onNewPatient={handleReset}
           />
         )}

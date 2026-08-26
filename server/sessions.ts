@@ -3,6 +3,7 @@ import crypto from 'crypto';
 export interface Session {
   sessionId: string;
   language: string;
+  clinicalMode: 'allopathy' | 'ayush';
   chiefComplaint: string;
   patientInfo?: any;
   prescriptions?: string;
@@ -20,12 +21,14 @@ export function createSession(
   language: string,
   chiefComplaint: string,
   patientInfo: any = null,
-  prescriptions: string = ''
+  prescriptions: string = '',
+  clinicalMode: 'allopathy' | 'ayush' = 'allopathy'
 ): Session {
   const sessionId = crypto.randomUUID();
   const session: Session = {
     sessionId,
     language,
+    clinicalMode,
     chiefComplaint,
     patientInfo,
     prescriptions,
@@ -47,4 +50,8 @@ export function updateSession(sessionId: string, updates: Partial<Session>): Ses
     Object.assign(session, updates);
   }
   return session;
+}
+
+export function deleteSession(sessionId: string): boolean {
+  return sessions.delete(sessionId);
 }

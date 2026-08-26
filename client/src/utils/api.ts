@@ -1,4 +1,4 @@
-import { PatientInfo, SummaryData, PrescriptionData, LLMQuestionResponse } from '../types/medikiosk';
+import { PatientInfo, SummaryData, PrescriptionData, LLMQuestionResponse, ClinicalMode, FhirBundle } from '../types/medikiosk';
 
 const API_BASE = '/api';
 
@@ -42,11 +42,12 @@ export async function startInterview(
   language: string,
   chiefComplaint: string,
   patientInfo?: PatientInfo | null,
-  prescriptions?: string
+  prescriptions?: string,
+  clinicalMode: ClinicalMode = 'allopathy'
 ) {
   return request<{ sessionId: string; question: LLMQuestionResponse }>('/interview/start', {
     method: 'POST',
-    body: JSON.stringify({ language, chiefComplaint, patientInfo, prescriptions }),
+    body: JSON.stringify({ language, chiefComplaint, patientInfo, prescriptions, clinicalMode }),
   });
 }
 
@@ -64,9 +65,32 @@ export async function generateSummary(sessionId: string, prescriptions?: string)
   });
 }
 
-export async function generateAutoRx(chiefComplaint: string, summary: SummaryData) {
+export async function generateAutoRx(
+  chiefComplaint: string,
+  summary: SummaryData,
+  clinicalMode: ClinicalMode = 'allopathy'
+) {
   return request<PrescriptionData>('/interview/auto-rx', {
     method: 'POST',
-    body: JSON.stringify({ chiefComplaint, summary }),
+    body: JSON.stringify({ chiefComplaint, summary, clinicalMode }),
+  });
+}
+
+export async function generateFhirBundle(
+  patientInfo: PatientInfo | null,
+  chiefComplaint: string,
+  summaryData: SummaryData,
+  prescriptionsData?: PrescriptionData
+) {
+  return request<{ success: boolean; message: string; bundle: FhirBundle }>('/interview/fhir-bundle', {
+    method: 'POST',
+    body: JSON.stringify({ patientInfo, chiefComplaint, summaryData, prescriptionsData }),
+  });
+}
+
+export async function purgeKioskSession(sessionId: string) {
+  return request<{ success: boolean; message: string }>('/interview/purge-session', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
   });
 }
