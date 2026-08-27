@@ -4,7 +4,10 @@
  * with zero robotic repetition and authentic medical logic.
  */
 
+import { getLocalizedItem } from './indicLanguages.js';
+
 export interface ExtractedClinicalSlots {
+
   symptoms: string[];
   locations: string[];
   qualifiers: string[];
@@ -253,7 +256,10 @@ export function buildClinicalProfile(
   return profile;
 }
 
-export function getInitialQuestionForComplaint(chiefComplaint: string): {
+export function getInitialQuestionForComplaint(
+  chiefComplaint: string,
+  language: string = 'en'
+): {
   next_question: string;
   suggested_replies: string[];
   red_flag: boolean;
@@ -263,9 +269,10 @@ export function getInitialQuestionForComplaint(chiefComplaint: string): {
   const c = (chiefComplaint || '').toLowerCase().trim();
 
   if (!c || c === 'general' || c === 'unknown' || c.includes('general') || c.includes('mixed') || c.includes('consultation')) {
+    const loc = getLocalizedItem('general_greeting', language);
     return {
-      next_question: 'Hello! What health issue or symptoms are you experiencing today?',
-      suggested_replies: ['Chest pain', 'Fever', 'Headache', 'Stomach pain', 'Cough / Cold', 'Skin problem', 'Teeth pain', 'Other'],
+      next_question: loc.q,
+      suggested_replies: loc.replies,
       red_flag: false,
       red_flag_reason: null,
       interview_complete: false,
@@ -273,80 +280,91 @@ export function getInitialQuestionForComplaint(chiefComplaint: string): {
   }
 
   if (c.includes('chest') || c.includes('heart') || c.includes('cardiac')) {
+    const loc = getLocalizedItem('cardiac_character', language);
     return {
-      next_question: 'Where exactly in your chest do you feel the pain, and is it a crushing pressure, sharp, or burning sensation?',
-      suggested_replies: ['Center of chest (Crushing pressure)', 'Left side radiating to arm', 'Burning / acidity sensation', 'Sharp stabbing pain'],
+      next_question: loc.q,
+      suggested_replies: loc.replies,
       red_flag: false,
       red_flag_reason: null,
       interview_complete: false,
     };
   }
 
-  if (c.includes('head') || c.includes('migraine')) {
+  if (c.includes('fever') || c.includes('infection') || c.includes('temp') || c.includes('bukhar') || c.includes('జ్వరం')) {
+    const loc = getLocalizedItem('fever_onset', language);
     return {
-      next_question: 'Where is the headache located, and is it a throbbing pulse on one side or a tight band around your head?',
-      suggested_replies: ['One side throbbing (Migraine)', 'Forehead & sinus pressure', 'Tight band around head', 'Back of head and neck'],
+      next_question: loc.q,
+      suggested_replies: loc.replies,
       red_flag: false,
       red_flag_reason: null,
       interview_complete: false,
     };
   }
 
-  if (c.includes('fever') || c.includes('infection') || c.includes('temp')) {
+  if (c.includes('skin') || c.includes('hair') || c.includes('rash') || c.includes('derma') || c.includes('జుట్టు') || c.includes('చర్మం')) {
+    const loc = getLocalizedItem('hair_site', language);
     return {
-      next_question: 'When did your fever start, and how high has your body temperature been?',
-      suggested_replies: ['Started today (99-100°F)', 'Since 2-3 days (101-103°F)', 'High fever with chills/shivering', 'More than a week'],
+      next_question: loc.q,
+      suggested_replies: loc.replies,
       red_flag: false,
       red_flag_reason: null,
       interview_complete: false,
     };
   }
 
-  if (c.includes('dental') || c.includes('tooth') || c.includes('teeth') || c.includes('gum')) {
+  if (c.includes('stomach') || c.includes('abdo') || c.includes('pet') || c.includes('gas') || c.includes('acidity') || c.includes('पोट') || c.includes('కడుపు')) {
+    const loc = getLocalizedItem('gi_associations', language);
     return {
-      next_question: 'Which specific tooth or area of your mouth is hurting (e.g., back molars, front teeth, or gums)?',
-      suggested_replies: ['Back molars (wisdom area)', 'Upper front teeth', 'Lower jaw / teeth', 'Gums / Bleeding area'],
+      next_question: loc.q,
+      suggested_replies: loc.replies,
       red_flag: false,
       red_flag_reason: null,
       interview_complete: false,
     };
   }
 
-  if (c.includes('skin') || c.includes('hair') || c.includes('rash') || c.includes('derma')) {
+  if (c.includes('dental') || c.includes('tooth') || c.includes('teeth') || c.includes('gum') || c.includes('दांत') || c.includes('दात') || c.includes('పంటి')) {
+    const loc = getLocalizedItem('hair_site', language);
     return {
-      next_question: 'Which part of your body is affected — is it hair/scalp, facial skin, or a rash on your body?',
-      suggested_replies: ['Hair / Scalp issue', 'Face (Acne / spots)', 'Arms / Legs rash', 'All over body itching'],
+      next_question: loc.q,
+      suggested_replies: loc.replies,
       red_flag: false,
       red_flag_reason: null,
       interview_complete: false,
     };
   }
 
-  if (c.includes('abdo') || c.includes('stomach') || c.includes('gastric') || c.includes('gi')) {
+  if (c.includes('head') || c.includes('migraine') || c.includes('सिरदर्द') || c.includes('डोकेदुखी') || c.includes('తలనొప్పి')) {
+    const loc = getLocalizedItem('cardiac_character', language);
     return {
-      next_question: 'Where in your abdomen is the discomfort, and is it related to meals (acidity burning, cramping, or nausea)?',
-      suggested_replies: ['Upper stomach / Acidity burning', 'Lower abdomen cramps', 'Nausea / vomiting with pain', 'General bloated feeling'],
+      next_question: loc.q,
+      suggested_replies: loc.replies,
       red_flag: false,
       red_flag_reason: null,
       interview_complete: false,
     };
   }
 
+
+  const loc = getLocalizedItem('general_greeting', language);
   return {
-    next_question: 'Hello! What health issue or symptoms are you experiencing today?',
-    suggested_replies: ['Chest pain', 'Fever', 'Headache', 'Stomach pain', 'Cough / Cold', 'Skin problem', 'Teeth pain', 'Other'],
+    next_question: loc.q,
+    suggested_replies: loc.replies,
     red_flag: false,
     red_flag_reason: null,
     interview_complete: false,
   };
 }
 
+
+
 /**
  * Intelligent Dynamic Clinical Follow-up Generator with Domain-Specific Medical Logic
  */
 export function generateAdaptiveFollowUp(
   profile: PatientClinicalProfile,
-  lastAnswer: string
+  lastAnswer: string,
+  language: string = 'en'
 ): {
   next_question: string;
   suggested_replies: string[];
@@ -354,47 +372,45 @@ export function generateAdaptiveFollowUp(
   red_flag_reason: string | null;
   interview_complete: boolean;
 } {
+  const isHindi = language === 'hi';
   const fullTextSoFar = profile.allSymptoms.join(' ') + ' ' + profile.primaryComplaint + ' ' + profile.askedQuestions.join(' ') + ' ' + lastAnswer;
-  const lastAnsLower = (lastAnswer || '').toLowerCase();
-
-  // 1. Precise Medical Domain Classification
+  const primaryComp = (profile.primaryComplaint || '').toLowerCase();
+  
+  // 1. Precise Medical Domain Classification (Prioritize primary complaint)
   let domain = 'general';
-  if (/hair|scalp|bald|alopecia|shedding|thinning|dandruff/i.test(fullTextSoFar)) {
+  if (/hair|scalp|bald|alopecia|shedding|thinning|dandruff|జుట్టు|बाल|केस|চুল/i.test(primaryComp)) {
     domain = 'hair';
-  } else if (/skin|rash|itch|pimple|acne|spots|allergy|eczema/i.test(fullTextSoFar) || /skin|derma/i.test(profile.primaryComplaint)) {
+  } else if (/skin|rash|itch|pimple|acne|spots|allergy|eczema|खुजली|चर्म|चामडी|ಚರ್ಮ|derma/i.test(primaryComp)) {
     domain = 'dermatology';
-  } else if (/tooth|teeth|dental|gum|molar|jaw/i.test(fullTextSoFar) || /dental/i.test(profile.primaryComplaint)) {
+  } else if (/tooth|teeth|dental|gum|molar|jaw|दांत|दात|పంటి|দাঁত/i.test(primaryComp)) {
     domain = 'dental';
-  } else if (/chest|heart|cardiac|angina/i.test(fullTextSoFar) || /chest/i.test(profile.primaryComplaint)) {
+  } else if (/chest|heart|cardiac|angina|सीने में दर्द|छातीत दुखणे|ఛాతీ నొప్పి|বুকের ব্যথা/i.test(primaryComp)) {
     domain = 'cardiac';
-  } else if (/headache|migraine|head/i.test(fullTextSoFar) || /headache/i.test(profile.primaryComplaint)) {
+  } else if (/headache|migraine|head|सिरदर्द|डोकेदुखी|తలనొప్పి|মাথা ব্যথা/i.test(primaryComp)) {
     domain = 'neurological';
-  } else if (/fever|bukhar|temperature|chills/i.test(fullTextSoFar) || /fever/i.test(profile.primaryComplaint)) {
+  } else if (/fever|bukhar|temperature|chills|बुखार|ताप|జ్వరం|জ্বর|તાવ/i.test(primaryComp)) {
     domain = 'fever';
-  } else if (/stomach|abdomen|pet|acidity|vomit|gas/i.test(fullTextSoFar) || /abdom/i.test(profile.primaryComplaint)) {
+  } else if (/stomach|abdomen|pet|acidity|vomit|gas|पेट|पोट|కడుపు|পেট|પેટ/i.test(primaryComp)) {
     domain = 'gi';
+  } else {
+    // If general greeting, classify from history
+    if (/hair|scalp|bald/i.test(fullTextSoFar)) domain = 'hair';
+    else if (/skin|rash/i.test(fullTextSoFar)) domain = 'dermatology';
+    else if (/tooth|dental/i.test(fullTextSoFar)) domain = 'dental';
+    else if (/chest|heart|cardiac/i.test(fullTextSoFar)) domain = 'cardiac';
+    else if (/headache|migraine/i.test(fullTextSoFar)) domain = 'neurological';
+    else if (/fever|bukhar/i.test(fullTextSoFar)) domain = 'fever';
+    else if (/stomach|abdomen|pet/i.test(fullTextSoFar)) domain = 'gi';
   }
 
-  // 2. Varied, Natural Acknowledgment (NO repetitive phrases!)
-  let ack = '';
-  if (/product|shampoo|oil/i.test(lastAnsLower)) {
-    ack = 'Noted that this began after using the product/shampoo.';
-  } else if (/sun exposure/i.test(lastAnsLower)) {
-    ack = 'Understood that sun exposure triggered this.';
-  } else if (/severe|unbearable|bahut/i.test(lastAnsLower)) {
-    ack = 'Noted the high severity of discomfort.';
-  } else if (profile.turnCount % 2 === 1 && profile.turnCount > 1) {
-    ack = 'Understood.';
-  }
-
-  const prefix = ack ? `${ack} ` : '';
-
-  // 3. Emergency Red Flag Detection
+  // 2. Emergency Red Flag Detection
   if (domain === 'cardiac') {
     if (/crush|heavy|radiat|left arm|jaw|sweat|breath|choking/i.test(lastAnswer) || (/chest/i.test(fullTextSoFar) && /left arm|shortness of breath/i.test(lastAnswer))) {
       return {
-        next_question: '🚨 EMERGENCY ALERT: Crushing chest discomfort with radiation / shortness of breath requires immediate cardiac evaluation. Please notify the OPD triage desk immediately.',
-        suggested_replies: ['Call Emergency Desk', 'Notify Doctor Now'],
+        next_question: isHindi
+          ? '🚨 आपातकालीन चेतावनी: सीने में भारी दबाव और बाएं हाथ में फैलता दर्द हृदय संबंधित आपातकाल हो सकता है। कृपया तुरंत ओपीडी ट्राइएज डेस्क को सूचित करें।'
+          : '🚨 EMERGENCY ALERT: Crushing chest discomfort with radiation / shortness of breath requires immediate cardiac evaluation. Please notify the OPD triage desk immediately.',
+        suggested_replies: isHindi ? ['आपातकालीन डेस्क को बुलाएं', 'डॉक्टर को तुरंत बताएं'] : ['Call Emergency Desk', 'Notify Doctor Now'],
         red_flag: true,
         red_flag_reason: 'Acute Coronary Syndrome / Myocardial Infarction indicators detected.',
         interview_complete: true,
@@ -403,8 +419,10 @@ export function generateAdaptiveFollowUp(
   } else if (domain === 'neurological') {
     if (/thunderclap|worst ever|sudden|projectile vomit|neck stiff/i.test(lastAnswer)) {
       return {
-        next_question: '🚨 URGENT MEDICAL ALERT: A sudden thunderclap severe headache requires urgent non-contrast CT evaluation.',
-        suggested_replies: ['Alert Emergency Triage'],
+        next_question: isHindi
+          ? '🚨 आपातकालीन चेतावनी: अचानक बिजली के झटके जैसा तेज सिरदर्द तुरंत सीटी स्कैन मूल्यांकन की मांग करता है।'
+          : '🚨 URGENT MEDICAL ALERT: A sudden thunderclap severe headache requires urgent non-contrast CT evaluation.',
+        suggested_replies: isHindi ? ['आपातकालीन ट्राइएज को अलर्ट करें'] : ['Alert Emergency Triage'],
         red_flag: true,
         red_flag_reason: 'Thunderclap headache suspicious for Subarachnoid Hemorrhage.',
         interview_complete: true,
@@ -412,10 +430,28 @@ export function generateAdaptiveFollowUp(
     }
   }
 
-  // 4. Interview Completion Trigger (~5-6 focused turns)
-  if (profile.turnCount >= 6 || (profile.coveredDimensions.has('past_history') && profile.coveredDimensions.has('medications') && profile.coveredDimensions.has('allergies'))) {
+  // 3. Guaranteed Disease-Specific Clinical Question Sequence Plan
+  const DOMAIN_QUESTION_PLAN: Record<string, string[]> = {
+    cardiac: ['cardiac_radiation', 'cardiac_exertion', 'cardiac_past_history', 'universal_allergies'],
+    fever: ['fever_associations', 'fever_medications', 'universal_chronic', 'universal_allergies'],
+    gi: ['gi_medications', 'universal_chronic', 'universal_allergies'],
+    hair: ['hair_character', 'hair_trigger', 'hair_dandruff', 'hair_medications', 'universal_chronic', 'universal_allergies'],
+    dermatology: ['hair_dandruff', 'hair_trigger', 'hair_medications', 'universal_chronic', 'universal_allergies'],
+    dental: ['gi_medications', 'universal_chronic', 'universal_allergies'],
+    neurological: ['cardiac_radiation', 'cardiac_exertion', 'universal_chronic', 'universal_allergies'],
+    general: ['fever_onset', 'fever_associations', 'universal_chronic', 'universal_allergies'],
+  };
+
+
+
+
+  const plan = DOMAIN_QUESTION_PLAN[domain] || DOMAIN_QUESTION_PLAN.general;
+  const planIndex = Math.max(0, profile.turnCount - 1);
+
+  if (planIndex >= plan.length || profile.turnCount >= 5) {
+    const loc = getLocalizedItem('intake_completion', language);
     return {
-      next_question: `${prefix}Thank you. I have structured your comprehensive medical intake note. The physician will review these findings with you momentarily.`,
+      next_question: loc.q,
       suggested_replies: [],
       red_flag: false,
       red_flag_reason: null,
@@ -423,258 +459,20 @@ export function generateAdaptiveFollowUp(
     };
   }
 
-  const alreadyAsked = (keyword: string) => {
-    return profile.askedQuestions.some((q) => q.includes(keyword.toLowerCase()));
-  };
-
-  // ==========================================
-  // DOMAIN 1: TRICHOLOGY / HAIR & SCALP
-  // ==========================================
-  if (domain === 'hair') {
-    if (!profile.coveredDimensions.has('character') && !alreadyAsked('thinning') && !alreadyAsked('shedding')) {
-      return {
-        next_question: `${prefix}Are you noticing heavy hair shedding while washing/combing, or visible thinning / bald patches on your scalp?`,
-        suggested_replies: ['Heavy shedding while washing/brushing', 'Gradual thinning on crown / parting', 'Circular bald patches (Alopecia)', 'Hairline receding at temples'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('exacerbating') && !alreadyAsked('shampoo') && !alreadyAsked('stress') && !alreadyAsked('product')) {
-      return {
-        next_question: `${prefix}Did this start after using a new shampoo, hair oil, or chemical treatment, or following major illness/stress?`,
-        suggested_replies: ['After new product / shampoo', 'Triggered by stress / post-illness', 'Started gradually over months', 'Dietary change / deficiency'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('associations') && !alreadyAsked('dandruff') && !alreadyAsked('itching') && !alreadyAsked('flaking')) {
-      return {
-        next_question: `${prefix}Do you have visible dandruff, white flaking, redness, or severe scalp itching?`,
-        suggested_replies: ['Severe itching & oily dandruff', 'Dry white flakes / scaling', 'Redness & tender scalp', 'No dandruff or itching'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('medications') && !alreadyAsked('minoxidil') && !alreadyAsked('serum') && !alreadyAsked('biotin')) {
-      return {
-        next_question: `${prefix}Have you tried any treatments like anti-dandruff shampoos (Ketoconazole), Minoxidil, hair serums, or Biotin supplements?`,
-        suggested_replies: ['Anti-dandruff shampoo / oils', 'Took Biotin / multivitamins', 'Tried Minoxidil / serums', 'No treatments tried yet'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('past_history') && !alreadyAsked('family') && !alreadyAsked('thyroid') && !alreadyAsked('pcos')) {
-      return {
-        next_question: `${prefix}Is there a family history of early hair loss, or any known thyroid or PCOS/hormonal issues?`,
-        suggested_replies: ['Family history of baldness', 'Thyroid disorder', 'PCOS / hormonal issue', 'No family history / normal'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('allergies') && !alreadyAsked('allergies')) {
-      return {
-        next_question: `${prefix}Do you have any known allergies to hair dyes, shampoos, or prescription medications?`,
-        suggested_replies: ['No known allergies (NKDA)', 'Allergic to hair dye (PPD)', 'Allergic to specific drugs', 'Not sure'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-  }
-
-  // ==========================================
-  // DOMAIN 2: DERMATOLOGY / SKIN RASH
-  // ==========================================
-  if (domain === 'dermatology') {
-    if (!profile.coveredDimensions.has('site') && !alreadyAsked('where is the rash')) {
-      return {
-        next_question: `${prefix}Where is the rash located, and does it look like red patches, raised pimples, or dry scaling?`,
-        suggested_replies: ['Face / forehead breakouts', 'Arms & legs red rash', 'Body patches / scaling', 'Localized itchy bump'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('associations') && !alreadyAsked('itching') && !alreadyAsked('burning')) {
-      return {
-        next_question: `${prefix}Is there intense itching, burning sensation, or oozing from the rash?`,
-        suggested_replies: ['Severe itching (worse at night)', 'Burning sensation & heat', 'Dry scaling without itch', 'Mild manageable itch'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('exacerbating') && !alreadyAsked('soap') && !alreadyAsked('sun')) {
-      return {
-        next_question: `${prefix}Did this condition start after using any new soap, cosmetic, or after sun exposure/sweat?`,
-        suggested_replies: ['After new cosmetic / soap', 'After sun exposure / sweating', 'After eating certain foods', 'No clear trigger'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('medications') && !alreadyAsked('creams') && !alreadyAsked('ointments')) {
-      return {
-        next_question: `${prefix}Have you applied any steroid creams, antifungal ointments, or taken anti-allergy tablets (like Cetirizine)?`,
-        suggested_replies: ['Applied OTC steroid / antifungal cream', 'Took Cetirizine / allergy tablet', 'Home remedies / Aloe vera', 'Haven\'t used anything yet'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-  }
-
-  // ==========================================
-  // DOMAIN 3: CARDIOVASCULAR / CHEST PAIN
-  // ==========================================
-  if (domain === 'cardiac') {
-    if (!profile.coveredDimensions.has('character') && !alreadyAsked('describe the chest')) {
-      return {
-        next_question: `${prefix}How would you describe the chest discomfort — is it a heavy crushing pressure, sharp stabbing, or burning sensation?`,
-        suggested_replies: ['Crushing / heavy pressure', 'Burning acidity sensation', 'Sharp / stabbing pain', 'Dull continuous ache'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('radiation') && !alreadyAsked('spread to your')) {
-      return {
-        next_question: `${prefix}Does this pain spread to your left arm, shoulder, jaw, neck, or back?`,
-        suggested_replies: ['Yes, spreads to left arm', 'Yes, to jaw and neck', 'Yes, to my back', 'No, stays in center of chest'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('exacerbating') && !alreadyAsked('aggravated by walking')) {
-      return {
-        next_question: `${prefix}Is the chest pain aggravated by walking or climbing stairs, and does resting relieve it?`,
-        suggested_replies: ['Worse with exertion / walking', 'Better with rest', 'Worse with deep breath', 'Constant regardless of rest'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('past_history') && !alreadyAsked('hypertension') && !alreadyAsked('blood pressure')) {
-      return {
-        next_question: `${prefix}Do you have a history of high blood pressure, diabetes, high cholesterol, or prior heart issues?`,
-        suggested_replies: ['Hypertension (High BP)', 'Diabetes Mellitus', 'Prior heart stent / angioplasty', 'No chronic conditions'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-  }
-
-  // ==========================================
-  // DOMAIN 4: DENTAL / ORAL
-  // ==========================================
-  if (domain === 'dental') {
-    if (!profile.coveredDimensions.has('character') && !alreadyAsked('tooth pain feel')) {
-      return {
-        next_question: `${prefix}Does the tooth pain shoot sharply with cold/hot drinks, or is it a continuous throbbing ache when biting down?`,
-        suggested_replies: ['Sharp sensitivity to cold / hot', 'Severe pain on biting down', 'Continuous throbbing ache', 'Dull continuous pain'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('associations') && !alreadyAsked('swelling')) {
-      return {
-        next_question: `${prefix}Do you notice any visible swelling in your cheek/gum, bleeding, or difficulty opening your mouth?`,
-        suggested_replies: ['Noticeable swelling on cheek/gum', 'Bleeding when brushing', 'Difficulty opening mouth', 'No swelling or bleeding'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-  }
-
-  // ==========================================
-  // DOMAIN 5: FEVER / INFECTION
-  // ==========================================
-  if (domain === 'fever') {
-    if (!profile.coveredDimensions.has('associations') && !alreadyAsked('cough') && !alreadyAsked('chills')) {
-      return {
-        next_question: `${prefix}Do you have chills/shivering, cough, sore throat, or burning sensation while urinating?`,
-        suggested_replies: ['Shivering & severe body aches', 'Cough & sore throat', 'Burning urination', 'Nausea / vomiting'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-    if (!profile.coveredDimensions.has('medications') && !alreadyAsked('paracetamol')) {
-      return {
-        next_question: `${prefix}Have you taken Paracetamol (like Dolo/Crocin), and does the temperature come down after taking it?`,
-        suggested_replies: ['Took Paracetamol (fever drops temporarily)', 'Took Paracetamol (no relief)', 'Home remedies / Kadha only', 'Haven\'t taken any medicine'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-  }
-
-  // ==========================================
-  // DOMAIN 6: GASTROINTESTINAL / ABDOMEN
-  // ==========================================
-  if (domain === 'gi') {
-    if (!profile.coveredDimensions.has('associations') && !alreadyAsked('vomiting') && !alreadyAsked('loose')) {
-      return {
-        next_question: `${prefix}Do you have burning acidity, nausea/vomiting, loose stools, or constipation?`,
-        suggested_replies: ['Severe burning acidity & nausea', 'Cramping with loose stools', 'Bloating & constipation', 'Only stomach pain'],
-        red_flag: false,
-        red_flag_reason: null,
-        interview_complete: false,
-      };
-    }
-  }
-
-  // ==========================================
-  // UNIVERSAL FINAL QUESTIONS (Relevant, Logical)
-  // ==========================================
-  if (!profile.coveredDimensions.has('past_history') && !alreadyAsked('diabetes') && !alreadyAsked('chronic')) {
-    return {
-      next_question: `${prefix}Do you have any existing chronic conditions like Diabetes, High BP, or Thyroid disorder?`,
-      suggested_replies: ['Diabetes Mellitus', 'Hypertension / High BP', 'Thyroid disorder', 'No chronic conditions'],
-      red_flag: false,
-      red_flag_reason: null,
-      interview_complete: false,
-    };
-  }
-
-  if (!profile.coveredDimensions.has('medications') && !alreadyAsked('regular daily') && !alreadyAsked('prescriptions')) {
-    return {
-      next_question: `${prefix}Are you currently taking any regular prescription medicines or supplements?`,
-      suggested_replies: ['Taking daily prescription meds', 'Taking supplements / vitamins', 'Ayurvedic / home remedies', 'No regular medicines'],
-      red_flag: false,
-      red_flag_reason: null,
-      interview_complete: false,
-    };
-  }
-
-  if (!profile.coveredDimensions.has('allergies') && !alreadyAsked('drug allergies')) {
-    return {
-      next_question: `${prefix}Do you have any known drug allergies (such as Penicillin, Sulfa drugs, or Aspirin)?`,
-      suggested_replies: ['No known drug allergies (NKDA)', 'Allergic to Penicillin', 'Allergic to Sulfa / NSAIDs', 'Not sure'],
-      red_flag: false,
-      red_flag_reason: null,
-      interview_complete: false,
-    };
-  }
+  const nextQuestionKey = plan[planIndex];
+  const loc = getLocalizedItem(nextQuestionKey, language);
 
   return {
-    next_question: `${prefix}Thank you for answering all questions. Your clinical intake is complete and ready for the doctor.`,
-    suggested_replies: [],
+    next_question: loc.q,
+    suggested_replies: loc.replies,
     red_flag: false,
     red_flag_reason: null,
-    interview_complete: true,
+    interview_complete: false,
   };
 }
+
+
+
 
 /**
  * Synthesizes a structured, highly readable, physician-ready Clinical EMR Note (HPI / ROS / PMH)

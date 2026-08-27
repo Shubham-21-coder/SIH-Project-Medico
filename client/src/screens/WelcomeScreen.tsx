@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ClinicalMode } from '../types/medikiosk';
 
 interface WelcomeScreenProps {
-  onStart: (language: string, chiefComplaint: string, mode: ClinicalMode) => void;
+  onStart: (language: string, chiefComplaint: string, mode: ClinicalMode, staffAssist?: boolean) => void;
   isLoading?: boolean;
 }
 
@@ -21,6 +21,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   const [step, setStep] = useState<number>(1);
   const [selectedLang, setSelectedLang] = useState<string>('hi');
   const [clinicalMode, setClinicalMode] = useState<ClinicalMode>('allopathy');
+  const [staffAssist, setStaffAssist] = useState<boolean>(false);
 
   const handleLanguageSelect = (lang: string) => {
     setSelectedLang(lang);
@@ -29,8 +30,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
 
   const handleModeAndComplaintSelect = (mode: ClinicalMode, complaint: string) => {
     setClinicalMode(mode);
-    onStart(selectedLang, complaint, mode);
+    onStart(selectedLang, complaint, mode, staffAssist);
   };
+
 
   return (
     <div className="screen welcome-screen flex-center fade-in">
@@ -64,16 +66,38 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
             ))}
           </div>
 
-          {/* DPDP Act 2023 Digital Health Protection Notice */}
-          <div className="dpdp-banner glass-card" style={{ marginTop: '2rem' }}>
-            <div className="dpdp-icon">🔒</div>
-            <div className="dpdp-content">
-              <strong>DPDP Act 2023 & ABDM Consent Compliant</strong>
-              <p>Your medical data is encrypted, ephemeral, and only shared with your treating doctor via ABDM FHIR standard upon your explicit consent.</p>
+          {/* Staff Assist Mode & DPDP Notice */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginTop: '2rem' }}>
+            <div
+              className={`glass-card ${staffAssist ? 'selected-lang' : ''}`}
+              style={{ padding: '1rem 1.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '1rem', border: staffAssist ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.08)' }}
+              onClick={() => setStaffAssist(!staffAssist)}
+            >
+              <div style={{ fontSize: '1.8rem' }}>👨‍💼</div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <strong style={{ fontSize: '0.95rem' }}>Volunteer / Staff Assist Mode</strong>
+                  <span className="gov-badge" style={{ fontSize: '0.65rem', background: staffAssist ? '#10b981' : 'rgba(255,255,255,0.1)' }}>
+                    {staffAssist ? 'ACTIVE' : 'OFF'}
+                  </span>
+                </div>
+                <p className="small-text" style={{ margin: '0.2rem 0 0' }}>
+                  Enable for hospital staff or triage nurses assisting elderly/first-time patients.
+                </p>
+              </div>
+            </div>
+
+            <div className="dpdp-banner glass-card" style={{ margin: 0 }}>
+              <div className="dpdp-icon">🔒</div>
+              <div className="dpdp-content">
+                <strong>DPDP Act 2023 & ABDM Consent Compliant</strong>
+                <p>Medical data is encrypted, ephemeral, and shared with treating doctor via ABDM FHIR standard upon explicit consent.</p>
+              </div>
             </div>
           </div>
         </div>
       )}
+
 
       {/* STEP 2: Clinical Department & Mode Selection (Allopathy vs AYUSH) */}
       {step === 2 && (

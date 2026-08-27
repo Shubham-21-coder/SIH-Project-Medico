@@ -3,6 +3,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import LoginScreen from './screens/LoginScreen';
 import PrescriptionScreen from './screens/PrescriptionScreen';
 import InterviewScreen from './screens/InterviewScreen';
+import AudioConfirmationScreen from './screens/AudioConfirmationScreen';
 import RedFlagScreen from './screens/RedFlagScreen';
 import LoadingScreen from './screens/LoadingScreen';
 import DoctorViewScreen from './screens/DoctorViewScreen';
@@ -25,6 +26,7 @@ type AppStep =
   | 'login'
   | 'prescriptions'
   | 'interview'
+  | 'audio_confirm'
   | 'red_flag'
   | 'loading'
   | 'doctor_summary'
@@ -33,6 +35,7 @@ type AppStep =
 export default function App() {
   const [mode, setMode] = useState<'kiosk' | 'doctor'>('kiosk');
   const [currentStep, setCurrentStep] = useState<AppStep>('welcome');
+  const [staffAssist, setStaffAssist] = useState<boolean>(false);
 
   // Intake State
   const [language, setLanguage] = useState<string>('hi');
@@ -47,6 +50,7 @@ export default function App() {
     isGuest: false,
   });
   const [prescriptions, setPrescriptions] = useState<string>('');
+
 
   // Interview & Doctor State
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -105,11 +109,15 @@ export default function App() {
   };
 
   // STEP 1: Language, Department & Mode Selection
-  const handleWelcomeStart = (selectedLang: string, selectedComplaint: string, mode: ClinicalMode) => {
+  const handleWelcomeStart = (selectedLang: string, selectedComplaint: string, mode: ClinicalMode, assist: boolean = false) => {
     setLanguage(selectedLang);
     setChiefComplaint(selectedComplaint);
     setClinicalMode(mode);
+    setStaffAssist(assist);
     setCurrentStep('login');
+    if (assist) {
+      showToast('Staff Assist Mode active for intake', 'info');
+    }
   };
 
   // STEP 2: Patient Registration & ABHA / Phone Verification
@@ -162,7 +170,12 @@ export default function App() {
         } catch (e) {
           setSummaryData(getActiveSummary());
         }
-        setCurrentStep(mode === 'doctor' ? 'doctor_dashboard' : 'doctor_summary');
+        if (mode === 'doctor') {
+          setCurrentStep('doctor_dashboard');
+        } else {
+          // Patient Kiosk Mode: Audio Confirmation (PRD FR-12)
+          setCurrentStep('audio_confirm');
+        }
       }
 
       return response;
@@ -171,6 +184,7 @@ export default function App() {
       throw err;
     }
   };
+
 
   // Toggle Kiosk <-> Doctor Portal
   const handleToggleMode = () => {
@@ -221,6 +235,18 @@ export default function App() {
         patientInfo={patientInfo}
       />
 
+      {staffAssist && mode === 'kiosk' && (
+        <div style={{ background: '#10b981', color: '#fff', padding: '0.45rem 1rem', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
+          <span>👨‍💼 Volunteer / Staff-Assisted Intake Mode Active (Hospital Nurse / Volunteer Guided)</span>
+          <button
+            onClick={() => setStaffAssist(false)}
+            style={{ background: 'rgba(0,0,0,0.2)', border: 'none', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+          >
+            Turn Off
+          </button>
+        </div>
+      )}
+
       <main className="main-content">
         {currentStep === 'welcome' && (
           <WelcomeScreen onStart={handleWelcomeStart} />
@@ -261,6 +287,22 @@ export default function App() {
           />
         )}
 
+        {currentStep === 'audio_confirm' && (
+          <AudioConfirmationScreen
+            summary={getActiveSummary()}
+            patientInfo={patientInfo}
+            clinicalMode={clinicalMode}
+            language={language}
+            onConfirm={() => {
+              showToast('Clinical summary confirmed and sent to OPD Doctor!', 'success');
+              setCurrentStep('doctor_summary');
+            }}
+            onEdit={() => {
+              setCurrentStep('interview');
+            }}
+          />
+        )}
+
         {currentStep === 'red_flag' && (
           <RedFlagScreen
             reason={redFlagReason}
@@ -268,6 +310,7 @@ export default function App() {
             onReset={handleReset}
           />
         )}
+
 
         {currentStep === 'loading' && (
           <LoadingScreen message="Analyzing Symptoms, Digitisations & Generating ABDM Clinical Note..." />

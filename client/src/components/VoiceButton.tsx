@@ -7,10 +7,23 @@ interface VoiceButtonProps {
   disabled?: boolean;
 }
 
+const STT_LANG_MAP: Record<string, string> = {
+  hi: 'hi-IN',
+  mr: 'mr-IN',
+  te: 'te-IN',
+  ta: 'ta-IN',
+  bn: 'bn-IN',
+  gu: 'gu-IN',
+  kn: 'kn-IN',
+  en: 'en-IN',
+};
+
 const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript, language = 'en-IN', disabled }) => {
-  const langCode = language === 'hi' ? 'hi-IN' : 'en-IN';
+  const langKey = language.toLowerCase().split('-')[0];
+  const langCode = STT_LANG_MAP[langKey] || language || 'en-IN';
   const { isListening, transcript, interimTranscript, isSupported, startListening, stopListening } = useSpeechRecognition(langCode);
   const prevListeningRef = useRef<boolean>(false);
+
 
   useEffect(() => {
     if (prevListeningRef.current && !isListening && transcript) {

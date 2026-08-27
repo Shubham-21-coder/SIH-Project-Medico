@@ -195,7 +195,8 @@ function normalizeComplaintKey(chiefComplaint: string): string {
 export async function getNextQuestion(
   chiefComplaint: string,
   history: Array<{ q?: string; a?: string }>,
-  clinicalMode: 'allopathy' | 'ayush' = 'allopathy'
+  clinicalMode: 'allopathy' | 'ayush' = 'allopathy',
+  language: string = 'hi'
 ) {
   // 1. AYUSH / AYURVEDIC DASHAVIDHA MODE
   if (clinicalMode === 'ayush') {
@@ -221,31 +222,8 @@ export async function getNextQuestion(
     };
   }
 
-  // 2. GEMINI LLM PATH (When API key configured)
-  if (genAI) {
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', generationConfig: { responseMimeType: 'application/json' } });
-      const prompt = getInterviewerPrompt(chiefComplaint);
+  // 2. ALLOPATHIC DEEP CLINICAL NLP & SEQUENTIAL INDIC FOLLOW-UP ENGINE
 
-      let contents = [
-        { role: 'user', parts: [{ text: prompt }] },
-        { role: 'model', parts: [{ text: 'Understood. I will follow those instructions and output only JSON.' }] },
-      ];
-
-      let historyText = '';
-      for (const item of history) {
-        historyText += `Q: ${item.q}\nA: ${item.a}\n\n`;
-      }
-
-      contents.push({ role: 'user', parts: [{ text: `History:\n${historyText}\nWhat is the next question?` }] });
-
-      const result = await model.generateContent({ contents });
-      const responseText = result.response.text();
-      return JSON.parse(responseText);
-    } catch (e) {
-      console.error('Gemini Error, falling back to smart engine:', e);
-    }
-  }
 
   // 3. ALLOPATHIC DEEP CLINICAL NLP & ADAPTIVE FOLLOW-UP ENGINE
   if (history.length > 0) {
@@ -266,7 +244,7 @@ export async function getNextQuestion(
 
   // Initial question tailored directly to the selected chief complaint/disease
   if (history.length === 0) {
-    return getInitialQuestionForComplaint(chiefComplaint);
+    return getInitialQuestionForComplaint(chiefComplaint, language);
   }
 
   // Build multi-turn clinical profile from patient narration
@@ -274,8 +252,9 @@ export async function getNextQuestion(
   const lastAnswer = history[history.length - 1]?.a || '';
 
   // Generate truly adaptive doctor follow-up question based on patient's exact input
-  return generateAdaptiveFollowUp(clinicalProfile, lastAnswer);
+  return generateAdaptiveFollowUp(clinicalProfile, lastAnswer, language);
 }
+
 
 
 
@@ -417,44 +396,127 @@ export async function generateAutoPrescription(
   }
 
   // Allopathic Formulation Generator
-  const comp = (chiefComplaint || '').toLowerCase();
+  const fullText = (
+    (chiefComplaint || '') + ' ' +
+    (summaryData?.chief_complaint || '') + ' ' +
+    (summaryData?.hpi || '')
+  ).toLowerCase();
 
-  if (comp.includes('chest') || comp.includes('heart')) {
+  // 1. TRICHOLOGY / HAIR & SCALP
+  if (fullText.includes('hair') || fullText.includes('scalp') || fullText.includes('alopecia') || fullText.includes('bald') || fullText.includes('dandruff') || fullText.includes('shedding')) {
+    return {
+      medications: [
+        { name: 'Tab. Keraboost (D-Biotin + Zinc + Amino Acids)', dosage: '1 Tab', frequency: '1-0-0 (Morning)', duration: '30 days', instructions: 'Take daily after breakfast with water' },
+        { name: 'Ketoconazole 2% Anti-Dandruff Shampoo', dosage: '10 ml', frequency: 'Twice Weekly', duration: '30 days', instructions: 'Apply on wet scalp, massage gently, leave for 5 mins then rinse' },
+        { name: 'Topical Minoxidil 5% Solution / Hair Serum', dosage: '1 ml', frequency: '0-0-1 (Bedtime)', duration: '30 days', instructions: 'Apply on dry scalp with dropper at night; do not rub vigorously' },
+        { name: 'Tab. Levocetirizine', dosage: '5 mg', frequency: '0-0-1 (SOS for itching)', duration: '10 days', instructions: 'At bedtime if severe scalp itching occurs' },
+      ],
+      investigations: ['Serum Ferritin & Iron Studies', 'Vitamin D3 & Vitamin B12 Levels', 'Thyroid Profile (Free T3, Free T4, TSH)', 'Complete Blood Count (CBC)'],
+      advice: ['Gentle scalp hygiene; avoid harsh chemical dyes or hot water wash', 'High-protein diet (Eggs, Paneer, Soya, Sprouts, Nuts)', 'Avoid tight hairstyles and manage sleep/stress'],
+      follow_up: '30 days in Dermatology / Trichology OPD',
+    };
+  }
+
+  // 2. DERMATOLOGY / SKIN RASH & ITCHING
+  if (fullText.includes('skin') || fullText.includes('rash') || fullText.includes('itch') || fullText.includes('allergy') || fullText.includes('eczema') || fullText.includes('derma')) {
+    return {
+      medications: [
+        { name: 'Tab. Levocetirizine', dosage: '5 mg', frequency: '0-0-1 (Bedtime)', duration: '10 days', instructions: 'At night after food to control nocturnal itching' },
+        { name: 'Calamine + Liquid Paraffin Soothing Lotion', dosage: 'Topical', frequency: 'Apply twice daily', duration: '14 days', instructions: 'Apply gently over itchy red patches after bath' },
+        { name: 'Hydrocortisone 1% / Mupirocin Cream', dosage: 'Topical Ointment', frequency: '1-0-1', duration: '7 days', instructions: 'Apply thin layer on inflamed red rash only' },
+        { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0 (Morning)', duration: '10 days', instructions: 'Empty stomach 30 mins before breakfast' },
+      ],
+      investigations: ['Absolute Eosinophil Count (AEC)', 'Total Serum IgE Level', 'Skin Scraping for Fungus (KOH Mount if scaling)'],
+      advice: ['Avoid hot water baths and harsh chemical soaps; use syndet cleansing bars', 'Wear loose cotton clothing', 'Strictly avoid scratching rash to prevent secondary bacterial infection'],
+      follow_up: '7 days in Dermatology OPD',
+    };
+  }
+
+  // 3. CARDIOVASCULAR / CHEST PAIN
+  if (fullText.includes('chest') || fullText.includes('heart') || fullText.includes('cardiac') || fullText.includes('angina')) {
     return {
       medications: [
         { name: 'Tab. Sorbitrate', dosage: '5 mg', frequency: 'Sublingual (SOS if chest pain)', duration: '5 days', instructions: 'Place under tongue if acute chest discomfort occurs' },
         { name: 'Tab. Ecosprin (Aspirin)', dosage: '75 mg', frequency: '0-1-0 (Post lunch)', duration: '30 days', instructions: 'Swallow whole with water after meals' },
         { name: 'Tab. Atorvastatin', dosage: '20 mg', frequency: '0-0-1 (Bedtime)', duration: '30 days', instructions: 'At night after dinner' },
+        { name: 'Tab. Telmisartan', dosage: '40 mg', frequency: '1-0-0 (Morning)', duration: '30 days', instructions: 'Before breakfast daily' },
         { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0 (Morning)', duration: '14 days', instructions: 'Empty stomach 30 mins before breakfast' },
       ],
       investigations: ['12-Lead Electrocardiogram (ECG)', 'Serum Troponin-I / Troponin-T', '2D Echocardiogram', 'Lipid Profile (Fasting)'],
-      advice: ['Complete physical rest; avoid heavy lifting', 'Strict low-sodium & low-oil diet', 'Report immediately to Emergency if pain radiates or dyspnea occurs'],
+      advice: ['Complete physical rest; avoid strenuous exertion or heavy lifting', 'Strict low-sodium & low-oil diet', 'Report immediately to Emergency if chest pain radiates to left arm or shortness of breath occurs'],
       follow_up: '3 days in Cardiology OPD',
     };
   }
 
-  if (comp.includes('teeth') || comp.includes('dental')) {
+  // 4. NEUROLOGICAL / HEADACHE & MIGRAINE
+  if (fullText.includes('headache') || fullText.includes('migraine') || fullText.includes('head')) {
+    return {
+      medications: [
+        { name: 'Tab. Napra-D 500 (Naproxen 500mg + Domperidone 10mg)', dosage: '1 Tab', frequency: '1 SOS (At headache onset)', duration: '5 days', instructions: 'Take immediately with water when migraine aura/pain begins' },
+        { name: 'Tab. Flunarizine', dosage: '5 mg', frequency: '0-0-1 (Bedtime)', duration: '30 days', instructions: 'Nightly for migraine prophylaxis' },
+        { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0', duration: '10 days', instructions: 'Empty stomach in morning' },
+      ],
+      investigations: ['Refraction & Fundoscopy Examination (Ophthalmology)', 'NCCT Head / MRI Brain (if red-flag symptoms persist)'],
+      advice: ['Maintain regular 7-8 hour sleep schedule', 'Avoid bright flashing lights, loud noise, and skipping meals', 'Keep a migraine trigger diary'],
+      follow_up: '7 days in Neurology / Medicine OPD',
+    };
+  }
+
+  // 5. GASTROINTESTINAL / ABDOMINAL PAIN & ACIDITY
+  if (fullText.includes('stomach') || fullText.includes('abdom') || fullText.includes('acid') || fullText.includes('gastric') || fullText.includes('vomit') || fullText.includes('nausea')) {
+    return {
+      medications: [
+        { name: 'Tab. Pan-D (Pantoprazole 40mg + Domperidone 30mg SR)', dosage: '1 Tab', frequency: '1-0-0 (Morning)', duration: '14 days', instructions: 'Empty stomach 30 mins before breakfast' },
+        { name: 'Syrup Mucaine / Gelusil Gel', dosage: '10 ml (2 tsp)', frequency: 'Thrice daily (Post meals)', duration: '7 days', instructions: 'After meals for acute burning relief' },
+        { name: 'Tab. Meftal-Spas (Dicyclomine + Mefenamic Acid)', dosage: '1 Tab', frequency: '1 SOS (For severe cramps)', duration: '3 days', instructions: 'Only if cramping pain occurs' },
+        { name: 'Probiotic Capsule (Sporlac-DS)', dosage: '1 Cap', frequency: '1-0-1', duration: '5 days', instructions: 'After food for gut flora restoration' },
+      ],
+      investigations: ['Ultrasound Whole Abdomen & Pelvis (USG)', 'Liver Function Tests (LFT)', 'Stool Routine & Microscopy'],
+      advice: ['Eat light, non-spicy, freshly prepared food (Khichdi, curd, porridge)', 'Avoid oily, deep-fried snacks, caffeine, and carbonated beverages', 'Do not lie down immediately after dinner'],
+      follow_up: '5 days in Gastroenterology / Medicine OPD',
+    };
+  }
+
+  // 6. FEVER & INFECTION
+  if (fullText.includes('fever') || fullText.includes('temp') || fullText.includes('bukhar') || fullText.includes('chill') || fullText.includes('cough') || fullText.includes('cold')) {
+    return {
+      medications: [
+        { name: 'Tab. Dolo (Paracetamol)', dosage: '650 mg', frequency: '1-0-1 (Or SOS if temp > 100°F)', duration: '5 days', instructions: 'After food with water (minimum 6 hour gap between doses)' },
+        { name: 'Tab. Augmentin (Amoxicillin + Clavulanate)', dosage: '625 mg', frequency: '1-0-1 (BD)', duration: '5 days', instructions: 'After meals (complete full 5-day antibiotic course)' },
+        { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0 (Morning)', duration: '5 days', instructions: 'Empty stomach in morning' },
+        { name: 'Oral Rehydration Salts (ORS) Sachet', dosage: '1 Sachet in 1 Liter', frequency: 'Sip throughout day', duration: '5 days', instructions: 'Maintain adequate electrolyte hydration' },
+      ],
+      investigations: ['Complete Blood Count (CBC) with Platelet Count', 'Dengue NS1 Antigen & IgM/IgG Test', 'Malarial Parasite (Card Antigen)', 'Typhoid Widal / Typhidot Test', 'Urine Routine Examination'],
+      advice: ['Adequate hydration (3 - 4 Liters fluids daily: coconut water, soups, ORS)', 'Tepid sponge wiping on forehead/arms if temperature exceeds 101°F', 'Complete bed rest'],
+      follow_up: '3 days in General Medicine OPD',
+    };
+  }
+
+  // 7. DENTAL & ORAL PAIN
+  if (fullText.includes('teeth') || fullText.includes('dental') || fullText.includes('tooth') || fullText.includes('gum')) {
     return {
       medications: [
         { name: 'Tab. Amoxicillin + Potassium Clavulanate (Augmentin)', dosage: '625 mg', frequency: '1-0-1 (BD)', duration: '5 days', instructions: 'After meals' },
-        { name: 'Tab. Ketorolac (Ketorol-DT)', dosage: '10 mg', frequency: '1-0-1 (SOS for pain)', duration: '3 days', instructions: 'Dissolve in half glass water' },
+        { name: 'Tab. Ketorolac (Ketorol-DT)', dosage: '10 mg', frequency: '1-0-1 (SOS for acute pain)', duration: '3 days', instructions: 'Dissolve tablet in half glass water' },
         { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0', duration: '5 days', instructions: 'Empty stomach in morning' },
-        { name: 'Chlorhexidine Mouthwash 0.2%', dosage: '10 ml', frequency: 'Twice daily', duration: '7 days', instructions: 'Rinse mouth for 60 seconds after brushing' },
+        { name: 'Chlorhexidine Mouthwash 0.2%', dosage: '10 ml', frequency: 'Twice daily', duration: '7 days', instructions: 'Rinse mouth gently for 60 seconds after brushing' },
       ],
       investigations: ['Intraoral Periapical X-Ray (IOPAR)', 'Orthopantomogram (OPG)'],
-      advice: ['Avoid chewing from the affected side', 'Avoid extremely hot or ice-cold beverages', 'Maintain gentle oral hygiene'],
+      advice: ['Avoid chewing from the affected side', 'Avoid extremely hot or ice-cold beverages', 'Maintain gentle oral hygiene and warm saline rinses'],
       follow_up: '5 days in Dental / Maxillofacial OPD',
     };
   }
 
+  // DEFAULT GENERAL MEDICINE FORMULATION
   return {
     medications: [
       { name: 'Tab. Paracetamol', dosage: '650 mg', frequency: '1-0-1 (SOS)', duration: '5 days', instructions: 'After food' },
       { name: 'Tab. Pantoprazole', dosage: '40 mg', frequency: '1-0-0', duration: '7 days', instructions: 'Before food in morning' },
-      { name: 'Tab. B-Complex with Zinc', dosage: '1 OD', frequency: '0-1-0', duration: '15 days', instructions: 'After lunch' },
+      { name: 'Tab. B-Complex with Zinc (Becozinc)', dosage: '1 Tab', frequency: '0-1-0 (After lunch)', duration: '15 days', instructions: 'Multivitamin supplement' },
     ],
     investigations: ['Complete Blood Count (CBC)', 'Erythrocyte Sedimentation Rate (ESR)', 'Routine Urine Examination'],
-    advice: ['Adequate hydration (2.5 - 3 Liters daily)', 'Adequate rest', 'Balanced nutritious diet'],
+    advice: ['Adequate hydration (2.5 - 3 Liters daily)', 'Adequate rest & balanced nutritious diet', 'Follow up if symptoms persist beyond 5 days'],
     follow_up: '5 days in General Medicine OPD',
   };
 }
+

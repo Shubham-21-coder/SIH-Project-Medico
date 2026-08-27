@@ -7,12 +7,15 @@ export interface PatientInfo {
   identifier: string; // ABHA ID or Phone number
   abhaNumber?: string;
   abhaAddress?: string;
+  originHospital?: string; // e.g. "SMS Hospital, Jaipur (Rajasthan)"
+  currentHospital?: string; // e.g. "SN Medical College & Hospital, Agra (UP)"
   isGuest?: boolean;
   language?: string;
   clinicalMode?: ClinicalMode;
   consentGranted?: boolean;
   consentTimestamp?: string;
 }
+
 
 export interface QuestionHistoryItem {
   question?: string;

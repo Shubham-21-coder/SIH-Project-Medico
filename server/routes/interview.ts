@@ -11,8 +11,8 @@ router.post('/start', async (req: Request, res: Response) => {
     const complaint = chiefComplaint || (clinicalMode === 'ayush' ? 'आयुर्वेदिक ओपीडी' : 'general');
     const mode = clinicalMode === 'ayush' ? 'ayush' : 'allopathy';
 
-    const session = createSession(language || 'en', complaint, patientInfo, prescriptions, mode);
-    const response = await getNextQuestion(complaint, [], mode);
+    const session = createSession(language || 'hi', complaint, patientInfo, prescriptions, mode);
+    const response = await getNextQuestion(complaint, [], mode, session.language);
 
     session.currentQuestion = response.next_question;
 
@@ -21,7 +21,8 @@ router.post('/start', async (req: Request, res: Response) => {
       question: {
         next_question: response.next_question,
         suggested_replies: response.suggested_replies,
-        ayush_category: response.ayush_category,
+        ayush_category: (response as any).ayush_category,
+
       },
     });
   } catch (error) {
@@ -44,7 +45,8 @@ router.post('/next', async (req: Request, res: Response) => {
 
     session.history.push({ q: session.currentQuestion || '', a: answer });
 
-    const response = await getNextQuestion(session.chiefComplaint, session.history, session.clinicalMode);
+    const response = await getNextQuestion(session.chiefComplaint, session.history, session.clinicalMode, session.language);
+
 
     if (response.red_flag) {
       updateSession(sessionId, { redFlag: true, redFlagReason: response.red_flag_reason });
