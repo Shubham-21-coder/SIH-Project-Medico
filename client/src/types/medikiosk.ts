@@ -14,7 +14,10 @@ export interface PatientInfo {
   clinicalMode?: ClinicalMode;
   consentGranted?: boolean;
   consentTimestamp?: string;
+  sessionToken?: string;
 }
+
+
 
 
 export interface QuestionHistoryItem {

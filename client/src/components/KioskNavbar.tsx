@@ -13,9 +13,10 @@ const KioskNavbar: React.FC<KioskNavbarProps> = ({ mode, onToggleMode, onNewPati
   return (
     <header className="kiosk-navbar">
       <div className="kiosk-brand" onClick={onGoToLogin} style={{ cursor: 'pointer' }}>
-        <span className="brand-logo">🏥</span>
-        <span>MediKiosk</span>
-        <span className="brand-tag">OPD AI Portal</span>
+        <span className="brand-logo">🌿</span>
+        <span>Ayush Setu</span>
+        <span className="brand-tag">आयुष सेतु OPD AI</span>
+
       </div>
 
       <div className="kiosk-nav-right">

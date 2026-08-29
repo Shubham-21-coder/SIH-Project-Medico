@@ -1,0 +1,11 @@
+[
+  {
+    "id": "3b1330a8-44dd-4dcd-a4b3-8ece67c314ed",
+    "name": "Dr. Test Physician",
+    "email": "testdoc1787841098700@hospital.local",
+    "phone": "9876543210",
+    "role": "doctor",
+    "passwordHash": "dc96f6a642a79ca167f2561061e7e92a:8b2db0418fd1c599c10960f41d2c11e450914b6772bff852c39b1a844830839d1d0a59f0346677e0f5fc2238bc36ac34cfbd47438d4520b2d13fcb9c3034b7f3",
+    "createdAt": "2026-08-27T14:31:39.000Z"
+  }
+]

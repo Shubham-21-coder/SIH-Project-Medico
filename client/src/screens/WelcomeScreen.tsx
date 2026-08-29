@@ -44,8 +44,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
               <span className="gov-badge">🇮🇳 National Health Mission & ABDM Enabled</span>
               <span className="gov-badge ayush-badge">🌿 Allopathy & AYUSH Integrated</span>
             </div>
-            <h1>MediKiosk ✚ AI Clinical Intake</h1>
-            <div className="subtitle">AI-Powered Multilingual OPD History & Document Digitization Platform</div>
+            <h1>Ayush Setu (आयुष सेतु) ✚ AI Clinical Intake</h1>
+            <div className="subtitle">AI-Powered Multilingual OPD History, ABDM & AYUSH Dashavidha Platform</div>
+
             <p className="description">
               Select your language. You can speak or tap on screen to record your symptoms and digitize prior medical records before meeting your physician.
             </p>

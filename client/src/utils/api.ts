@@ -24,19 +24,35 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 }
 
-export async function sendSmsOtp(mobileNumber: string) {
-  return request<{ success: boolean; provider: string; otpCode?: string; message?: string }>('/auth/send-otp', {
+export async function sendSmsOtp(identifier: string, channel?: 'sms' | 'email') {
+  return request<{
+    success: boolean;
+    channel?: 'sms' | 'email';
+    provider?: string;
+    message: string;
+    otpCode?: string;
+    cooldownSeconds?: number;
+    error?: string;
+  }>('/auth/send-otp', {
     method: 'POST',
-    body: JSON.stringify({ mobileNumber }),
+    body: JSON.stringify({ identifier, channel }),
   });
 }
 
-export async function verifySmsOtp(mobileNumber: string, otp: string) {
-  return request<{ success: boolean; message?: string; error?: string }>('/auth/verify-otp', {
+export async function verifySmsOtp(identifier: string, otp: string) {
+  return request<{
+    success: boolean;
+    message: string;
+    sessionToken?: string;
+    error?: string;
+    remainingAttempts?: number;
+  }>('/auth/verify-otp', {
     method: 'POST',
-    body: JSON.stringify({ mobileNumber, otp }),
+    body: JSON.stringify({ identifier, otp }),
   });
 }
+
+
 
 export async function startInterview(
   language: string,

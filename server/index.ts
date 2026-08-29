@@ -16,9 +16,10 @@ app.use('/api/interview', interviewRoutes);
 app.use('/api/auth', authRoutes);
 
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', server: 'MediKiosk TypeScript API' });
+  res.json({ status: 'ok', server: 'Ayush Setu TypeScript API' });
 });
 
 app.listen(port, () => {
-  console.log(`MediKiosk TypeScript Server listening on port ${port}`);
+  console.log(`Ayush Setu (आयुष सेतु) Server listening on port ${port}`);
 });
+
