@@ -531,579 +531,8 @@ button {
 .fade-in {
   animation: fadeIn var(--transition-normal) forwards;
 }
+/* Base styles continue below, media queries consolidated at the end of stylesheet */
 
-/* =========================================
-   RESPONSIVE DESIGN & MOBILE OPTIMIZATIONS
-   ========================================= */
-
-/* --- TABLETS & SMALL LAPTOPS (max-width: 1024px) --- */
-@media (max-width: 1024px) {
-  .screen {
-    padding: 1.5rem 1rem;
-  }
-
-  .step-container, .prescription-container {
-    max-width: 100%;
-  }
-
-  .chat-container {
-    max-width: 100%;
-  }
-
-  .doc-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
-  .doc-header-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-}
-
-/* --- TABLETS & LANDSCAPE PHONES (max-width: 860px) --- */
-@media (max-width: 860px) {
-  html {
-    font-size: 16px;
-  }
-
-  .main-content {
-    padding-top: 56px;
-  }
-
-  .kiosk-navbar {
-    height: 56px;
-    padding: 0 0.85rem;
-  }
-
-  .kiosk-brand {
-    font-size: 1.1rem;
-    gap: 0.5rem;
-  }
-
-  .brand-tag {
-    display: none;
-  }
-
-  .nav-text-full, .patient-badge-full {
-    display: none !important;
-  }
-
-  .nav-text-short, .patient-badge-short {
-    display: inline !important;
-  }
-
-  .nav-btn {
-    height: 36px !important;
-    min-height: 36px !important;
-    padding: 0 9px !important;
-    font-size: 0.78rem !important;
-  }
-
-  .nav-patient-badge {
-    font-size: 0.75rem;
-    padding: 3px 8px;
-  }
-
-  .mode-selection-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .card-grid {
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
-
-  .patient-active-banner {
-    padding: 1rem;
-  }
-
-  .patient-active-banner > div:first-child {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
-
-  .doc-vitals-strip {
-    width: 100%;
-    justify-content: space-around;
-  }
-
-  .doc-tabs-nav {
-    display: flex;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 4px;
-    gap: 0.4rem;
-  }
-
-  .doc-tabs-nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .doc-tab-btn {
-    white-space: nowrap;
-    flex-shrink: 0;
-    padding: 0.5rem 0.85rem;
-    font-size: 0.82rem;
-  }
-
-  .emr-summary-grid {
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  }
-}
-
-/* --- STANDARD SMARTPHONES (max-width: 640px) --- */
-@media (max-width: 640px) {
-  html {
-    font-size: 15px;
-  }
-
-  .screen {
-    padding: 1rem 0.65rem;
-    min-height: calc(100vh - 56px);
-  }
-
-  .glass-card {
-    padding: 1rem 0.85rem;
-    border-radius: var(--radius-md);
-  }
-
-  h1 {
-    font-size: 1.45rem;
-    line-height: 1.3;
-  }
-
-  h2 {
-    font-size: 1.25rem;
-  }
-
-  h3 {
-    font-size: 1.05rem;
-  }
-
-  .subtitle {
-    font-size: 0.85rem;
-  }
-
-  .description {
-    font-size: 0.85rem;
-  }
-
-  .btn-primary, .btn-secondary, .btn-danger {
-    min-height: 44px;
-    padding: 10px 16px;
-    font-size: 0.9rem;
-  }
-
-  .btn-lg {
-    min-height: 48px;
-    padding: 12px 18px;
-    font-size: 0.92rem;
-  }
-
-  /* Welcome Screen */
-  .welcome-header h1 {
-    font-size: clamp(1.2rem, 5vw, 1.6rem);
-  }
-
-  .gov-badge-row {
-    flex-wrap: wrap;
-    gap: 0.35rem;
-  }
-
-  .gov-badge {
-    font-size: 0.68rem;
-    padding: 2px 7px;
-  }
-
-  .card-grid.language-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-    max-width: 100%;
-  }
-
-  .card.language-card {
-    padding: 0.75rem 0.4rem;
-    min-height: 75px;
-    gap: 0.3rem;
-  }
-
-  .card.language-card .icon {
-    font-size: 1.6rem;
-  }
-
-  .card.language-card .card-label {
-    font-size: 0.88rem;
-    text-align: center;
-  }
-
-  .complaint-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-    max-width: 100%;
-  }
-
-  .mode-category-box {
-    padding: 1rem 0.85rem;
-  }
-
-  /* Prescription Screen */
-  .prescription-container {
-    padding: 1rem 0.75rem;
-  }
-
-  .upload-dropzone {
-    padding: 1.5rem 1rem;
-  }
-
-  .sample-rx-grid {
-    grid-template-columns: 1fr !important;
-    gap: 0.6rem;
-  }
-
-  .ocr-card-top {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.65rem;
-  }
-
-  .ocr-preview-wrap {
-    width: 100%;
-    align-items: center;
-  }
-
-  .ocr-preview-img {
-    width: 90px;
-    height: 120px;
-  }
-
-  .prescription-actions {
-    flex-direction: column-reverse;
-    width: 100%;
-    gap: 0.6rem;
-  }
-
-  .prescription-actions .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .voice-input-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .rx-voice-col {
-    align-self: center;
-    margin-top: 0.5rem;
-  }
-
-  /* Interview / Chat Screen */
-  .interview-screen {
-    width: 100%;
-    height: calc(100dvh - 56px);
-    max-height: calc(100dvh - 56px);
-    min-height: calc(100dvh - 56px);
-    padding: 0.25rem 0.4rem 0.4rem;
-    justify-content: stretch;
-    overflow: hidden;
-  }
-
-  .chat-container {
-    width: 100%;
-    height: 100%;
-    border-radius: var(--radius-md);
-  }
-
-  .chat-header {
-    padding: 0.6rem 0.75rem;
-  }
-
-  .header-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-    font-size: 0.8rem;
-  }
-
-  .messages-container {
-    padding: 0.6rem 0.65rem;
-    gap: 0.5rem;
-  }
-
-  .message-bubble {
-    max-width: 90%;
-    font-size: 0.9rem;
-    padding: 0.65rem 0.85rem;
-    border-radius: 1rem;
-  }
-
-  .bubble-category-tag {
-    font-size: 0.72rem;
-  }
-
-  .chips-container {
-    padding: 0.4rem 0.6rem;
-  }
-
-  .chips-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    justify-content: flex-start;
-    gap: 0.4rem;
-    padding: 2px 0;
-  }
-
-  .chips-row::-webkit-scrollbar {
-    display: none;
-  }
-
-  .chip {
-    min-height: 38px;
-    padding: 6px 14px;
-    font-size: 0.82rem;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .input-controls-bar {
-    padding: 0.5rem 0.6rem;
-    gap: 0.4rem;
-  }
-
-  .input-controls-bar .voice-btn {
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
-    font-size: 1.15rem;
-  }
-
-  .voice-col {
-    min-width: 44px;
-    width: 44px;
-  }
-
-  .chat-input {
-    height: 44px;
-    font-size: 0.88rem;
-    padding: 0 0.75rem;
-  }
-
-  .send-btn {
-    height: 44px;
-    padding: 0 0.9rem;
-    font-size: 0.82rem;
-  }
-
-  /* Doctor Summary & Dashboard */
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
-    gap: 0.5rem;
-    padding: 0.5rem 0 1.5rem;
-  }
-
-  .action-buttons .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .summary-grid, .emr-summary-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .meds-table-container {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .meds-table {
-    min-width: 540px;
-  }
-
-  .prescribe-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .prescribe-controls .input-field,
-  .prescribe-controls select,
-  .prescribe-controls button {
-    width: 100%;
-  }
-
-  /* Modals */
-  .modal-backdrop {
-    padding: 0.5rem;
-  }
-
-  .modal-content {
-    padding: 1rem 0.85rem;
-    max-width: 96vw;
-    max-height: 92vh;
-    border-radius: var(--radius-md);
-  }
-
-  .modal-header h2 {
-    font-size: 1.15rem;
-  }
-
-  .otp-container {
-    gap: 0.35rem;
-  }
-
-  .otp-input {
-    width: 38px;
-    height: 46px;
-    font-size: 1.15rem;
-  }
-}
-
-/* --- SMALL SMARTPHONES (max-width: 480px) --- */
-@media (max-width: 480px) {
-  html {
-    font-size: 14.5px;
-  }
-
-  .kiosk-navbar {
-    height: 52px;
-    padding: 0 0.5rem;
-  }
-
-  .kiosk-brand .brand-name {
-    display: none;
-  }
-
-  .kiosk-brand .brand-logo {
-    font-size: 1.25rem;
-    padding: 3px 5px;
-  }
-
-  .kiosk-nav-right {
-    gap: 0.25rem;
-  }
-
-  .nav-btn {
-    height: 33px !important;
-    min-height: 33px !important;
-    padding: 0 7px !important;
-    font-size: 0.72rem !important;
-  }
-
-  .nav-patient-badge {
-    max-width: 75px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.68rem;
-    padding: 2px 5px;
-  }
-
-  .welcome-header h1 {
-    font-size: 1.2rem;
-  }
-
-  .card-grid.language-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.4rem;
-  }
-
-  .card.language-card {
-    padding: 0.6rem 0.35rem;
-    min-height: 70px;
-  }
-
-  .card.language-card .icon {
-    font-size: 1.4rem;
-  }
-
-  .card.language-card .card-label {
-    font-size: 0.82rem;
-  }
-
-  .complaint-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .doc-vitals-strip {
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 0.25rem !important;
-    padding: 0.35rem 0.45rem !important;
-  }
-
-  .doc-vitals-strip > div {
-    padding: 0 !important;
-    border-right: none !important;
-  }
-
-  .doc-tab-btn {
-    font-size: 0.76rem;
-    padding: 0.4rem 0.6rem;
-  }
-
-  .orders-card {
-    padding: 0.75rem;
-  }
-
-  .prescribe-section {
-    padding: 0.85rem;
-  }
-
-  .message-bubble {
-    max-width: 94%;
-    font-size: 0.86rem;
-    padding: 0.6rem 0.75rem;
-  }
-
-  .chat-input {
-    font-size: 0.85rem;
-    height: 42px;
-  }
-
-  .send-btn {
-    font-size: 0.8rem;
-    height: 42px;
-    padding: 0 0.75rem;
-  }
-
-  .input-controls-bar .voice-btn {
-    width: 42px;
-    height: 42px;
-    min-height: 42px;
-    font-size: 1.1rem;
-  }
-
-  .voice-col {
-    min-width: 42px;
-    width: 42px;
-  }
-}
-
-/* --- ULTRA-COMPACT (max-width: 360px) --- */
-@media (max-width: 360px) {
-  .card-grid.language-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .nav-patient-badge {
-    display: none;
-  }
-
-  .nav-btn {
-    padding: 0 5px !important;
-    font-size: 0.68rem !important;
-  }
-}
 
 /* =========================================
    PRINT STYLES
@@ -3968,3 +3397,325 @@ img, svg, video, canvas {
   box-shadow: 0 0 10px rgba(0, 212, 170, 0.3);
   outline: none;
 }
+
+/* ============================================================
+   GLOBAL RESPONSIVE MEDIA QUERIES (EXECUTE LAST FOR HIGH SPECIFICITY)
+   ============================================================ */
+
+/* 1. Large Laptops & Desktops (max-width: 1200px) */
+@media (max-width: 1200px) {
+  .step-container, .chat-container, .doctor-dashboard-container {
+    max-width: 95% !important;
+  }
+}
+
+/* 2. Tablets & Small Laptops (max-width: 992px) */
+@media (max-width: 992px) {
+  html {
+    font-size: 16px;
+  }
+
+  .screen {
+    padding: 1.25rem 1rem !important;
+  }
+
+  .mode-selection-grid,
+  .doctor-view-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+
+  .kiosk-navbar {
+    padding: 0.5rem 1rem !important;
+  }
+
+  .nav-text-full, .patient-badge-full {
+    display: none !important;
+  }
+  .nav-text-short, .patient-badge-short {
+    display: inline-block !important;
+  }
+}
+
+/* 3. Mobile Devices & Tablets (max-width: 768px) */
+@media (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+
+  body, #root, .app-container {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  .screen {
+    padding: 1rem 0.65rem !important;
+    min-height: calc(100vh - 58px) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .step-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .main-content {
+    padding-top: 58px !important;
+  }
+
+  .kiosk-navbar {
+    height: auto !important;
+    min-height: 54px !important;
+    padding: 0.4rem 0.65rem !important;
+    flex-wrap: wrap !important;
+    gap: 0.4rem !important;
+  }
+
+  .brand-tag {
+    display: none !important;
+  }
+
+  .brand-name {
+    font-size: 1.05rem !important;
+  }
+
+  .kiosk-nav-right {
+    gap: 0.35rem !important;
+    flex-wrap: wrap !important;
+  }
+
+  .glass-card {
+    padding: 1rem 0.85rem !important;
+    border-radius: var(--radius-md) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Form & Grid elements responsive stacking */
+  .auth-tab-selector,
+  .form-row-2col,
+  .form-row-3col {
+    grid-template-columns: 1fr !important;
+    gap: 0.6rem !important;
+  }
+
+  .card-grid,
+  .complaint-list-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    gap: 0.65rem !important;
+  }
+
+  .card-grid.language-grid,
+  .language-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
+
+  .login-card {
+    padding: 1.25rem 0.85rem !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .welcome-header h1 {
+    font-size: clamp(1.3rem, 5vw, 1.8rem) !important;
+    line-height: 1.25 !important;
+  }
+
+  .welcome-header .subtitle {
+    font-size: 0.88rem !important;
+  }
+
+  .welcome-header .description {
+    font-size: 0.82rem !important;
+    max-width: 100% !important;
+  }
+
+  /* Chat screen mobile responsiveness */
+  .chat-container {
+    height: calc(100vh - 75px) !important;
+    max-height: calc(100vh - 75px) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 0.75rem 0.5rem !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .chat-header {
+    padding: 0.5rem 0.65rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.35rem !important;
+  }
+
+  .header-info {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .patient-name {
+    font-size: 0.85rem !important;
+  }
+
+  .step-counter {
+    font-size: 0.75rem !important;
+  }
+
+  .message-wrapper.assistant,
+  .message-wrapper.user {
+    max-width: 92% !important;
+  }
+
+  .message-bubble {
+    font-size: 0.9rem !important;
+    padding: 0.75rem 0.85rem !important;
+  }
+
+  .quick-reply-chips {
+    gap: 0.35rem !important;
+    padding: 0.4rem 0.2rem !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .quick-chip {
+    padding: 0.35rem 0.7rem !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap !important;
+  }
+
+  .input-controls-bar {
+    padding: 0.5rem 0.4rem !important;
+    gap: 0.35rem !important;
+  }
+
+  .btn-primary, .btn-secondary, .btn-danger {
+    min-height: 42px !important;
+    padding: 8px 14px !important;
+    font-size: 0.88rem !important;
+  }
+
+  /* Modals responsiveness */
+  .rx-modal-overlay {
+    padding: 0.5rem !important;
+  }
+
+  .otp-modal-card,
+  .modal-card {
+    max-width: 96% !important;
+    padding: 1rem 0.75rem !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .otp-inputs-row {
+    gap: 0.3rem !important;
+  }
+
+  .otp-box {
+    width: clamp(1.9rem, 10vw, 2.5rem) !important;
+    height: clamp(2.4rem, 12vw, 3rem) !important;
+    font-size: 1.15rem !important;
+  }
+
+  /* Tables responsiveness */
+  table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* 4. Small Mobile Phones (max-width: 480px) */
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
+  .screen {
+    padding: 0.6rem 0.35rem !important;
+  }
+
+  .welcome-header h1 {
+    font-size: 1.3rem !important;
+  }
+
+  .welcome-header .subtitle {
+    font-size: 0.8rem !important;
+  }
+
+  .kiosk-navbar {
+    padding: 0.3rem 0.4rem !important;
+  }
+
+  .brand-name {
+    font-size: 0.95rem !important;
+  }
+
+  .nav-btn {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    min-height: 36px !important;
+  }
+
+  .card-grid.language-grid,
+  .language-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.4rem !important;
+  }
+
+  .card.language-card {
+    padding: 0.5rem 0.25rem !important;
+    min-height: 65px !important;
+  }
+
+  .card.language-card .card-label {
+    font-size: 0.8rem !important;
+  }
+
+  .card-grid,
+  .complaint-list-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .otp-inputs-row {
+    gap: 0.25rem !important;
+  }
+
+  .otp-box {
+    width: clamp(1.8rem, 10vw, 2.2rem) !important;
+    height: clamp(2.3rem, 12vw, 2.7rem) !important;
+    font-size: 1.05rem !important;
+  }
+
+  .auth-tab-selector button {
+    padding: 0.5rem 0.4rem !important;
+    font-size: 0.82rem !important;
+  }
+}
+
+/* 5. Extra Small Mobile Phones (max-width: 360px) */
+@media (max-width: 360px) {
+  .card-grid.language-grid,
+  .language-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .otp-box {
+    width: 1.7rem !important;
+    height: 2.2rem !important;
+    font-size: 1rem !important;
+  }
+}
+
