@@ -83,10 +83,10 @@ const PrescriptionPrintView: React.FC<PrescriptionPrintViewProps> = ({
           {/* Patient Demographic Bar */}
           <div className="rx-patient-banner">
             <div>
-              <strong>Patient Name:</strong> {patientInfo?.name || 'Shubham Garg'}
+              <strong>Patient Name:</strong> {patientInfo?.name || 'New OPD Patient'}
             </div>
             <div>
-              <strong>Age / Sex:</strong> {patientInfo?.age || '20'} Yrs / {patientInfo?.gender || 'Male'}
+              <strong>Age / Sex:</strong> {patientInfo?.age || '25'} Yrs / {patientInfo?.gender || 'Male'}
             </div>
             <div>
               <strong>Date:</strong> {currentDate}

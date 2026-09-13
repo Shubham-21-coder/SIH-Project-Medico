@@ -211,7 +211,7 @@ const InterviewScreen: React.FC<InterviewScreenProps> = ({
         <div className="chat-header">
           <div className="header-info">
             <span className="patient-name">
-              👤 {patientInfo?.name || 'Shubham Garg'} ({patientInfo?.age || '20'}y, {patientInfo?.gender || 'Male'})
+              👤 {patientInfo?.name || 'New OPD Patient'} ({patientInfo?.age || '25'}y, {patientInfo?.gender || 'Male'})
               <span className={`mode-pill-mini ${clinicalMode === 'ayush' ? 'ayush-pill' : 'allopathy-pill'}`} style={{ marginLeft: '0.6rem' }}>
                 {clinicalMode === 'ayush' ? '🌿 आयुर्वेद दशविध परीक्षा' : '🩺 Allopathy SOCRATES'}
               </span>

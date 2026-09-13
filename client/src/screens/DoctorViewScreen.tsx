@@ -123,13 +123,13 @@ const DoctorViewScreen: React.FC<DoctorViewScreenProps> = ({
         {/* Patient Identity Banner */}
         <div className="patient-summary-card glass-card">
           <div className="patient-name-title">
-            👤 {patientInfo?.name || 'Shubham Garg'}
+            👤 {patientInfo?.name || 'New OPD Patient'}
             <span className="patient-subinfo">
-              ({patientInfo?.age || '20'} yrs, {patientInfo?.gender || 'Male'})
+              ({patientInfo?.age || '25'} yrs, {patientInfo?.gender || 'Male'})
             </span>
           </div>
           <div className="metadata">
-            <span className="metadata-badge">ABHA: {patientInfo?.identifier || '91-4920-1849-2810'}</span>
+            <span className="metadata-badge">ABHA: {patientInfo?.abhaNumber || patientInfo?.identifier || 'Verified Patient'}</span>
             <span className="metadata-badge">Session: {sessionId?.substring(0, 8) || 'SESS-102'}</span>
             <span className="metadata-badge">Time: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             <span className="metadata-badge">Mode: {isAyush ? 'AYUSH' : 'ALLOPATHY'}</span>

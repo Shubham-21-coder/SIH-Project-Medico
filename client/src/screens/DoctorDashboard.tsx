@@ -245,10 +245,10 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
               </span>
             </div>
             <h3 style={{ margin: '0.3rem 0 0.1rem' }}>
-              👤 {patientInfo?.name || 'Shubham Garg'} ({patientInfo?.age || '20'}y / {patientInfo?.gender || 'Male'})
+              👤 {patientInfo?.name || 'New OPD Patient'} ({patientInfo?.age || '25'}y / {patientInfo?.gender || 'Male'})
             </h3>
             <span className="sub-id" style={{ display: 'block', marginTop: '0.2rem' }}>
-              ABHA ID: {patientInfo?.identifier || '91-4920-1849-2810'} • Token #104 • 📍 Origin: {patientInfo?.originHospital || 'SMS Hospital, Jaipur (Rajasthan)'} ➔ Verified at: {patientInfo?.currentHospital || 'SN Medical College, Agra (UP)'}
+              ABHA ID: {patientInfo?.abhaNumber || patientInfo?.identifier || 'Verified Patient'} • Token #104 • 📍 OPD Queue Active
             </span>
 
 
