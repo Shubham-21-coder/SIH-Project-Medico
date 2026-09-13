@@ -4,10 +4,11 @@ import { PatientInfo } from '../types/medikiosk';
 interface RedFlagScreenProps {
   reason?: string | null;
   patientInfo?: PatientInfo | null;
+  sessionId?: string | null;
   onReset: () => void;
 }
 
-const RedFlagScreen: React.FC<RedFlagScreenProps> = ({ reason, patientInfo, onReset }) => {
+const RedFlagScreen: React.FC<RedFlagScreenProps> = ({ reason, patientInfo, sessionId, onReset }) => {
   return (
     <div className="screen red-flag-screen flex-center fade-in">
       <div className="red-flag-card glass-card slide-in">

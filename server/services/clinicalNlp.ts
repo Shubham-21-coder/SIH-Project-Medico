@@ -41,13 +41,14 @@ const SYMPTOM_PATTERNS: Array<{ regex: RegExp; label: string; dimension: string 
   // Dermatology / Skin
   { regex: /\b(skin|rash|itch|itching|khujli|pimple|acne|spots|boil|allergy|blister|eczema|psoriasis|fungal)\b/i, label: 'Skin Condition', dimension: 'dermatology' },
   // Dental / Oral
-  { regex: /\b(tooth|teeth|toothache|daant|molar|gum|gums|masude|jaw|mouth|tongue|root canal|cavity)\b/i, label: 'Tooth / Dental Pain', dimension: 'dental' },
+  { regex: /(tooth|teeth|toothache|daant|molar|gum|gums|masude|jaw|mouth|tongue|root canal|cavity|दांत|दाँत|मसूड़े|दाढ़|दात|పంటి|దంత|দাঁত|ಹಲ್ಲು)/i, label: 'Tooth / Dental Pain', dimension: 'dental' },
   // Cardiovascular / Thoracic
-  { regex: /\b(chest|heart|cardiac|seene|palpitation|angina|anginal|tightness|heaviness in chest)\b/i, label: 'Chest Discomfort', dimension: 'cardiac' },
+  { regex: /(chest|heart|cardiac|seene|palpitation|angina|anginal|tightness|heaviness in chest|सीने में दर्द|छाती|ఛాతీ|বুকের ব্যথা)/i, label: 'Chest Discomfort', dimension: 'cardiac' },
   // Neurological / Head
-  { regex: /\b(headache|migraine|sar dard|sir dard|head ache|throbbing head|dizziness|giddiness|vertigo)\b/i, label: 'Headache / Neurological', dimension: 'neurological' },
+  { regex: /(headache|migraine|sar dard|sir dard|head ache|throbbing head|dizziness|giddiness|vertigo|सिरदर्द|सिर दर्द|डोकेदुखी|తలనొప్పి|মাথা ব্যথা|માથાનો દુખાવો)/i, label: 'Headache / Neurological', dimension: 'neurological' },
   // Infection / Thermoregulation
-  { regex: /\b(fever|temperature|bukhar|tap|chills|shivering|sweats|rigors|pyrexia)\b/i, label: 'Fever / Infection', dimension: 'fever' },
+  { regex: /(fever|temperature|bukhar|tap|chills|shivering|sweats|rigors|pyrexia|बुखार|ताप|ज्वर|జ్వరం|জ্বর|તાવ)/i, label: 'Fever / Infection', dimension: 'fever' },
+
   // Gastrointestinal / Abdomen
   { regex: /\b(stomach|abdomen|abdominal|pet|tummy|belly|acidity|gas|vomit|vomiting|nausea|loose motion|diarrhea|constipation|cramps|indigestion)\b/i, label: 'Abdominal / GI Distress', dimension: 'gi' },
   // Respiratory
@@ -323,8 +324,8 @@ export function getInitialQuestionForComplaint(
     };
   }
 
-  if (c.includes('dental') || c.includes('tooth') || c.includes('teeth') || c.includes('gum') || c.includes('दांत') || c.includes('दात') || c.includes('పంటి')) {
-    const loc = getLocalizedItem('hair_site', language);
+  if (c.includes('dental') || c.includes('tooth') || c.includes('teeth') || c.includes('gum') || c.includes('molar') || c.includes('jaw') || c.includes('दांत') || c.includes('दाँत') || c.includes('मसूड़े') || c.includes('दाढ़') || c.includes('दात') || c.includes('పంటి') || c.includes('দাঁত') || c.includes('ಹಲ್ಲು')) {
+    const loc = getLocalizedItem('dental_character', language);
     return {
       next_question: loc.q,
       suggested_replies: loc.replies,
@@ -334,8 +335,8 @@ export function getInitialQuestionForComplaint(
     };
   }
 
-  if (c.includes('head') || c.includes('migraine') || c.includes('सिरदर्द') || c.includes('डोकेदुखी') || c.includes('తలనొప్పి')) {
-    const loc = getLocalizedItem('cardiac_character', language);
+  if (c.includes('head') || c.includes('migraine') || c.includes('सिरदर्द') || c.includes('सिर दर्द') || c.includes('डोकेदुखी') || c.includes('తలనొప్పి') || c.includes('মাথা ব্যথা') || c.includes('માથાનો દુખાવો')) {
+    const loc = getLocalizedItem('headache_character', language);
     return {
       next_question: loc.q,
       suggested_replies: loc.replies,
@@ -382,11 +383,11 @@ export function generateAdaptiveFollowUp(
     domain = 'hair';
   } else if (/skin|rash|itch|pimple|acne|spots|allergy|eczema|खुजली|चर्म|चामडी|ಚರ್ಮ|derma/i.test(primaryComp)) {
     domain = 'dermatology';
-  } else if (/tooth|teeth|dental|gum|molar|jaw|दांत|दात|పంటి|দাঁত/i.test(primaryComp)) {
+  } else if (/tooth|teeth|dental|gum|molar|jaw|दांत|दाँत|मसूड़े|दाढ़|दात|పంటి|দাঁত|ಹಲ್ಲು/i.test(primaryComp)) {
     domain = 'dental';
   } else if (/chest|heart|cardiac|angina|सीने में दर्द|छातीत दुखणे|ఛాతీ నొప్పి|বুকের ব্যথা/i.test(primaryComp)) {
     domain = 'cardiac';
-  } else if (/headache|migraine|head|सिरदर्द|डोकेदुखी|తలనొప్పి|মাথা ব্যথা/i.test(primaryComp)) {
+  } else if (/headache|migraine|head|सिरदर्द|सिर दर्द|डोकेदुखी|తలనొప్పి|মাথা ব্যথা|માથાનો દુખાવો/i.test(primaryComp)) {
     domain = 'neurological';
   } else if (/fever|bukhar|temperature|chills|बुखार|ताप|జ్వరం|জ্বর|તાવ/i.test(primaryComp)) {
     domain = 'fever';
@@ -394,13 +395,13 @@ export function generateAdaptiveFollowUp(
     domain = 'gi';
   } else {
     // If general greeting, classify from history
-    if (/hair|scalp|bald/i.test(fullTextSoFar)) domain = 'hair';
-    else if (/skin|rash/i.test(fullTextSoFar)) domain = 'dermatology';
-    else if (/tooth|dental/i.test(fullTextSoFar)) domain = 'dental';
-    else if (/chest|heart|cardiac/i.test(fullTextSoFar)) domain = 'cardiac';
-    else if (/headache|migraine/i.test(fullTextSoFar)) domain = 'neurological';
-    else if (/fever|bukhar/i.test(fullTextSoFar)) domain = 'fever';
-    else if (/stomach|abdomen|pet/i.test(fullTextSoFar)) domain = 'gi';
+    if (/hair|scalp|bald|alopecia|shedding|thinning|dandruff|జుట్టు|बाल|केस|চুল/i.test(fullTextSoFar)) domain = 'hair';
+    else if (/skin|rash|itch|pimple|acne|spots|allergy|eczema|खुजली|चर्म|चामडी|ಚರ್ಮ|derma/i.test(fullTextSoFar)) domain = 'dermatology';
+    else if (/tooth|teeth|dental|gum|molar|jaw|दांत|दाँत|मसूड़े|दाढ़|दात|పంటి|দাঁত|ಹಲ್ಲು/i.test(fullTextSoFar)) domain = 'dental';
+    else if (/chest|heart|cardiac|angina|सीने में दर्द|छातीत दुखणे|ఛాతీ నొప్పి|বুকের ব্যথা/i.test(fullTextSoFar)) domain = 'cardiac';
+    else if (/headache|migraine|head|सिरदर्द|सिर दर्द|डोकेदुखी|తలనొప్పి|মাথা ব্যথা|માથાનો દુખાવો/i.test(fullTextSoFar)) domain = 'neurological';
+    else if (/fever|bukhar|temperature|chills|बुखार|ताप|జ్వరం|জ্বর|તાવ/i.test(fullTextSoFar)) domain = 'fever';
+    else if (/stomach|abdomen|pet|acidity|vomit|gas|पेट|पोट|కడుపు|পেট|પેટ/i.test(fullTextSoFar)) domain = 'gi';
   }
 
   // 2. Emergency Red Flag Detection
@@ -437,8 +438,8 @@ export function generateAdaptiveFollowUp(
     gi: ['gi_medications', 'universal_chronic', 'universal_allergies'],
     hair: ['hair_character', 'hair_trigger', 'hair_dandruff', 'hair_medications', 'universal_chronic', 'universal_allergies'],
     dermatology: ['hair_dandruff', 'hair_trigger', 'hair_medications', 'universal_chronic', 'universal_allergies'],
-    dental: ['gi_medications', 'universal_chronic', 'universal_allergies'],
-    neurological: ['cardiac_radiation', 'cardiac_exertion', 'universal_chronic', 'universal_allergies'],
+    dental: ['dental_character', 'dental_trigger', 'universal_chronic', 'universal_allergies'],
+    neurological: ['headache_character', 'universal_chronic', 'universal_allergies'],
     general: ['fever_onset', 'fever_associations', 'universal_chronic', 'universal_allergies'],
   };
 

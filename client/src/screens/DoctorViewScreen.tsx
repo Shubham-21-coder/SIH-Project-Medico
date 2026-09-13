@@ -1,25 +1,33 @@
 import React, { useState } from 'react';
-import { SummaryData, PatientInfo, FhirBundle } from '../types/medikiosk';
-import { generateFhirBundle } from '../utils/api';
+import { SummaryData, PatientInfo, DoctorInfo, ReviewState, FhirBundle } from '../types/medikiosk';
+import { generateFhirBundle, approveHistory } from '../utils/api';
 
 interface DoctorViewScreenProps {
   summary: SummaryData;
   sessionId?: string;
+  encounterId?: string;
+  reviewState?: ReviewState;
   language?: string;
   chiefComplaint?: string;
   patientInfo?: PatientInfo | null;
   prescriptions?: string;
+  doctorInfo?: DoctorInfo | null;
   onSave: (summary: SummaryData) => void;
+  onApprove?: (approvedSummary: SummaryData) => void;
 }
 
 const DoctorViewScreen: React.FC<DoctorViewScreenProps> = ({
   summary,
   sessionId,
+  encounterId,
+  reviewState = 'in_progress',
   language,
   chiefComplaint,
   patientInfo,
   prescriptions,
+  doctorInfo,
   onSave,
+  onApprove,
 }) => {
   const [editedSummary, setEditedSummary] = useState<SummaryData>(
     summary || {
@@ -53,7 +61,7 @@ const DoctorViewScreen: React.FC<DoctorViewScreenProps> = ({
     setIsGeneratingFhir(true);
     setShowFhirModal(true);
     try {
-      const res = await generateFhirBundle(patientInfo || null, chiefComplaint || '', editedSummary);
+      const res = await generateFhirBundle(patientInfo || null, chiefComplaint || '', editedSummary, prescriptions || '');
       setFhirBundle(res.bundle);
     } catch (e) {
       console.error(e);

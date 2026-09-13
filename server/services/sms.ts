@@ -48,6 +48,27 @@ const RESEND_COOLDOWN_MS = 30 * 1000; // 30 seconds
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const MAX_REQUESTS_PER_WINDOW = 5;
 
+// Automatic periodic garbage collection for expired OTPs and stale sessions
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of otpStore.entries()) {
+    if (now > record.expiresAt) {
+      otpStore.delete(key);
+    }
+  }
+  for (const [token, session] of verifiedSessions.entries()) {
+    if (now > session.expiresAt) {
+      verifiedSessions.delete(token);
+    }
+  }
+  for (const [key, rl] of rateLimitStore.entries()) {
+    if (now - rl.lastRequestTime > RATE_LIMIT_WINDOW_MS) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 3 * 60 * 1000).unref();
+
+
 /**
  * Standardizes Indian/international phone numbers to E.164 format.
  */

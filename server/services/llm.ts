@@ -6,13 +6,14 @@ import { buildClinicalProfile, generateAdaptiveFollowUp, getInitialQuestionForCo
 
 let genAI: GoogleGenerativeAI | null = null;
 
-
-if (process.env.GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  console.log('Gemini API client initialized.');
-} else {
-  console.log('GEMINI_API_KEY not found in environment. Using smart clinical engine mode for LLM.');
+export function getGenAiClient(): GoogleGenerativeAI | null {
+  if (!genAI && process.env.GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    console.log('Gemini API client initialized.');
+  }
+  return genAI;
 }
+
 
 // ============================================================
 // AYUSH / AYURVEDIC DASHAVIDHA PARIKSHA QUESTION FLOW
@@ -80,6 +81,16 @@ const AYUSH_DASHAVIDHA_QUESTIONS: Array<{
       'मध्यम संहनन (संतुलित मध्यम शरीर)',
       'प्रवर संहनन (हृष्ट-पुष्ट, मजबूत देह)',
       'अत्यधिक मेद / मोटापा',
+    ],
+  },
+  {
+    category: 'Pramana (Body Proportions & Measurements)',
+    q: 'आपके शरीर की माप एवं अनुपात (प्रमाण) कैसा है — लंबाई, भार, और अंग अनुपात?',
+    replies: [
+      'सामान्य ऊँचाई व संतुलित भार (BMI 18-25)',
+      'कम भार / दुबला-पतला (BMI < 18)',
+      'अधिक भार / स्थूल (BMI > 25)',
+      'अनिश्चित / मापन उपलब्ध नहीं',
     ],
   },
   {
@@ -151,17 +162,65 @@ const SKIN_HAIR_QUESTIONS: Array<{ q: string; replies: string[] }> = [
   { q: 'Any additional information you want the doctor to know?', replies: ['Recent pregnancy / delivery', 'Major stress / illness recently', 'Weight loss / gain', 'Nothing else'] },
 ];
 
-function detectNonsenseInput(answer: string): string | null {
-  const a = (answer || '').trim().toLowerCase();
-  if (!a || a.length < 2) return 'Sorry, I did not catch that. Could you please describe your health problem or symptoms?';
-
-  const abusivePatterns = ['nati', 'gali', 'bkl', 'mc', 'bc', 'bsdk', 'fuck', 'shit', 'damn', 'idiot', 'stupid', 'chutiya', 'gaand', 'lund', 'randi'];
-  if (abusivePatterns.some((p) => a.includes(p))) {
-    return 'Please be respectful. I am here to help you get medical assistance. What health issue are you experiencing today?';
+export function detectNonsenseInput(answer: string, answerState?: string, language: string = 'hi'): string | null {
+  if (answerState === 'unknown' || answerState === 'declined' || answerState === 'skip') {
+    return null;
   }
 
-  if (a.length <= 3 && !/\d/.test(a) && !/\b(ok|no|yes|na|hi|si|ha|nahi)\b/.test(a)) {
-    return 'I could not understand your response. Please describe your symptoms or select one of the quick options.';
+  const raw = (answer || '').trim();
+  const a = raw.toLowerCase();
+
+  if (!a || a.length < 2) {
+    return language === 'hi'
+      ? 'उत्तर बहुत छोटा या अस्पष्ट है। कृपया अपने लक्षणों का विवरण दें या नीचे दिए गए विकल्पों में से चुनें।'
+      : 'Response is too short or unclear. Please describe your health symptoms or select one of the options below.';
+  }
+
+  // Abusive language detection
+  const abusivePatterns = ['nati', 'gali', 'bkl', 'mc', 'bc', 'bsdk', 'fuck', 'shit', 'damn', 'idiot', 'stupid', 'chutiya', 'gaand', 'lund', 'randi'];
+  if (abusivePatterns.some((p) => a.includes(p))) {
+    return language === 'hi'
+      ? 'कृपया अभद्र भाषा का प्रयोग न करें। ओपीडी सहायक केवल स्वास्थ्य संबंधी प्रश्न पूछता है। कृपया अपने लक्षण बताएं।'
+      : 'Please refrain from using abusive language. I am here to help collect your clinical history. Please describe your symptoms.';
+  }
+
+  // Explicit off-topic entities (Sports, Celebrities, Entertainment, Politics, Gaming, Tech, Finance)
+  const offTopicKeywords = [
+    'virat', 'kohli', 'dhoni', 'rohit', 'cricket', 'ipl', 'match', 'score', 'football', 'messi', 'ronaldo', 'sachin', 'babar',
+    'movie', 'film', 'cinema', 'actor', 'actress', 'hero', 'bollywood', 'hollywood', 'netflix', 'youtube', 'reels', 'instagram', 'tiktok',
+    'modi', 'bjp', 'congress', 'election', 'vote', 'pubg', 'free fire', 'game', 'gaming', 'crypto', 'bitcoin', 'iphone', 'laptop'
+  ];
+
+  // Clinical & symptom terms (English + Transliterated Hindi + Indications)
+  const medicalKeywords = [
+    'pain', 'ache', 'fever', 'cough', 'cold', 'stomach', 'chest', 'heart', 'head', 'tooth', 'teeth', 'gum', 'skin', 'hair',
+    'swell', 'swelling', 'blood', 'pus', 'sensit', 'hot', 'cold', 'food', 'eat', 'drink', 'water', 'sleep', 'vomit', 'nausea',
+    'gas', 'acid', 'joint', 'knee', 'back', 'neck', 'shoulder', 'leg', 'arm', 'throat', 'breath', 'dizzy', 'rash', 'itch',
+    'dard', 'bukhar', 'khansi', 'jukam', 'pet', 'seene', 'sar', 'sir', 'daant', 'daath', 'masude', 'baal', 'khujli', 'sujan',
+    'khoon', 'thanda', 'garam', 'khana', 'peena', 'paani', 'neend', 'ulti', 'gala', 'saans', 'chakar', 'dawai', 'medicine',
+    'doctor', 'hospital', 'opd', 'problem', 'takleef', 'bimar', 'ill', 'sick', 'day', 'days', 'week', 'weeks',
+    'month', 'months', 'year', 'years', 'din', 'hafte', 'mahine', 'saal', 'subah', 'raat', 'aaj', 'kal', 'pehle',
+    'mild', 'moderate', 'severe', 'sharp', 'dull', 'left', 'right', 'both', 'upper', 'lower', 'front', 'back', 'side',
+    'yes', 'no', 'ha', 'haa', 'haan', 'nahi', 'nhi', 'na', 'ok', 'okay', 'fine', 'none', 'nothing', 'kuch nahi', 'pata nahi',
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'
+  ];
+
+  const hindiMedicalRegex = /दर्द|बुखार|खांसी|जुकाम|पेट|सीने|छाती|सिर|दांत|मसूड़े|बाल|सूजन|खून|ठंडा|गर्म|खाना|पानी|नींद|उल्टी|गला|सांस|चक्कर|दवा|अस्पताल|तकलीफ|बीमार|दिन|हफ्ता|महीना|साल|सुबह|रात|आज|कल|हाँ|नहीं|पता नहीं|कुछ नहीं|कम|ज्यादा|बायां|दायां|दोनों|ऊपर|नीचे/;
+
+  const hasOffTopicWord = offTopicKeywords.some((w) => a.includes(w));
+  const hasMedicalWord = medicalKeywords.some((w) => a.includes(w)) || /\d/.test(a);
+  const isDevanagariMedical = hindiMedicalRegex.test(raw);
+
+  if (hasOffTopicWord && !hasMedicalWord && !isDevanagariMedical) {
+    return language === 'hi'
+      ? `"${raw}" ओपीडी प्रश्न का प्रासंगिक उत्तर नहीं है। कृपया अपनी बीमारी या लक्षणों से संबंधित उत्तर दें, अथवा नीचे दिए गए विकल्पों का प्रयोग करें।`
+      : `"${raw}" is not relevant to the clinical question. Please describe your health problem or select one of the options below.`;
+  }
+
+  if (a.length > 6 && !hasMedicalWord && !isDevanagariMedical && !/\b(ok|yes|no|na|ha|nhi|nahi)\b/.test(a)) {
+    return language === 'hi'
+      ? 'यह उत्तर स्वास्थ्य प्रश्न से संबंधित नहीं लग रहा है। कृपया अपनी समस्या स्पष्ट करें या नीचे दिए गए विकल्पों को चुनें।'
+      : 'This answer does not seem relevant to your medical condition. Please describe your symptoms or select an option below.';
   }
 
   return null;
@@ -169,26 +228,26 @@ function detectNonsenseInput(answer: string): string | null {
 
 function detectComplaintFromAnswer(answer: string): string {
   const a = (answer || '').toLowerCase();
-  if (a.includes('chest') || a.includes('heart') || a.includes('cardiac') || a.includes('seene')) return 'chest_pain';
-  if (a.includes('head') || a.includes('migraine') || a.includes('sar dard') || a.includes('sir dard')) return 'headache';
-  if (a.includes('fever') || a.includes('temperature') || a.includes('bukhar') || a.includes('tap')) return 'fever';
-  if (a.includes('stomach') || a.includes('abdomen') || a.includes('pet') || a.includes('gut') || a.includes('acidity') || a.includes('gas')) return 'abdominal_pain';
-  if (a.includes('cough') || a.includes('cold') || a.includes('khansi') || a.includes('jukam') || a.includes('gala')) return 'cough';
-  if (a.includes('teeth') || a.includes('tooth') || a.includes('daant') || a.includes('dental') || a.includes('gum') || a.includes('masude')) return 'dental_pain';
-  if (a.includes('skin') || a.includes('hair') || a.includes('baal') || a.includes('khujli') || a.includes('rash') || a.includes('alopecia') || a.includes('acne')) return 'skin_hair';
+  if (a.includes('chest') || a.includes('heart') || a.includes('cardiac') || a.includes('seene') || /सीने|छाती|ఛాతీ|বুক/.test(a)) return 'chest_pain';
+  if (a.includes('head') || a.includes('migraine') || a.includes('sar dard') || a.includes('sir dard') || /सिरदर्द|सिर दर्द|डोकेदुखी|తలనొప్పి|মাথা|માથા/.test(a)) return 'headache';
+  if (a.includes('fever') || a.includes('temperature') || a.includes('bukhar') || a.includes('tap') || /बुखार|ताप|జ్వరం|জ্বর|તાવ/.test(a)) return 'fever';
+  if (a.includes('stomach') || a.includes('abdomen') || a.includes('pet') || a.includes('gut') || a.includes('acidity') || a.includes('gas') || /पेट|पोट|కడుపు|পেট|પેટ/.test(a)) return 'abdominal_pain';
+  if (a.includes('cough') || a.includes('cold') || a.includes('khansi') || a.includes('jukam') || a.includes('gala') || /खांसी|जुकाम|दग्गु|কাহশি/.test(a)) return 'cough';
+  if (a.includes('teeth') || a.includes('tooth') || a.includes('daant') || a.includes('dental') || a.includes('gum') || a.includes('masude') || /दांत|दाँत|मसूड़े|दाढ़|दात|పంటి|দাঁত|ಹಲ್ಲು/.test(a)) return 'dental_pain';
+  if (a.includes('skin') || a.includes('hair') || a.includes('baal') || a.includes('khujli') || a.includes('rash') || a.includes('alopecia') || a.includes('acne') || /बाल|खुजली|चर्म|केस|జుట్టు/.test(a)) return 'skin_hair';
   return 'general';
 }
 
 function normalizeComplaintKey(chiefComplaint: string): string {
   const comp = (chiefComplaint || '').toLowerCase().trim().replace(/[\s-]/g, '_');
   if (!comp || comp === 'general' || comp === 'unknown') return 'general';
-  if (comp.includes('chest') || comp.includes('heart') || comp.includes('cardiac')) return 'chest_pain';
-  if (comp.includes('head') || comp.includes('migraine')) return 'headache';
-  if (comp.includes('fever') || comp.includes('temp') || comp.includes('bukhar')) return 'fever';
-  if (comp.includes('stomach') || comp.includes('abdo') || comp.includes('gut') || comp.includes('pet')) return 'abdominal_pain';
-  if (comp.includes('cough') || comp.includes('throat') || comp.includes('khansi')) return 'cough';
-  if (comp.includes('teeth') || comp.includes('tooth') || comp.includes('dental') || comp.includes('gum')) return 'dental_pain';
-  if (comp.includes('skin') || comp.includes('hair') || comp.includes('rash') || comp.includes('derma')) return 'skin_hair';
+  if (comp.includes('chest') || comp.includes('heart') || comp.includes('cardiac') || /सीने|छाती|ఛాతీ|বুক/.test(comp)) return 'chest_pain';
+  if (comp.includes('head') || comp.includes('migraine') || /सिरदर्द|सिर दर्द|डोकेदुखी|తలనొప్పి|মাথা|માથા/.test(comp)) return 'headache';
+  if (comp.includes('fever') || comp.includes('temp') || comp.includes('bukhar') || /बुखार|ताप|జ్వరం|জ্বর|તાવ/.test(comp)) return 'fever';
+  if (comp.includes('stomach') || comp.includes('abdo') || comp.includes('gut') || comp.includes('pet') || /पेट|पोट|కడుపు|পেট|પેટ/.test(comp)) return 'abdominal_pain';
+  if (comp.includes('cough') || comp.includes('throat') || comp.includes('khansi') || /खांसी|जुकाम|दग्गु|কাহশি/.test(comp)) return 'cough';
+  if (comp.includes('teeth') || comp.includes('tooth') || comp.includes('dental') || comp.includes('gum') || /दांत|दाँत|मसूड़े|दाढ़|दात|పంటి|দাঁত|ಹಲ್ಲು/.test(comp)) return 'dental_pain';
+  if (comp.includes('skin') || comp.includes('hair') || comp.includes('rash') || comp.includes('derma') || /बाल|खुजली|चर्म|केस|జుట్టు/.test(comp)) return 'skin_hair';
   return 'general';
 }
 
@@ -274,34 +333,62 @@ export async function generateSummary(
 
   // 1. AYUSH / AYURVEDIC STRUCTURED SUMMARY
   if (clinicalMode === 'ayush') {
-    let transcriptText = history.map((item) => `${item.q}: ${item.a}`).join(' | ');
+    let transcriptText = history.map((item) => `${item.q}: ${item.a || '[Not answered]'}`).join(' | ');
+
+    // PRD FR04: Build AYUSH pariksha from actual interview answers
+    const ayushFields: any = {
+      prakriti: '[Not assessed — requires practitioner examination]',
+      vikriti: '[Not assessed — requires practitioner examination]',
+      agni: '[Not assessed — patient self-report pending]',
+      koshtha: '[Not assessed — patient self-report pending]',
+      ahara_vihara: '[Not assessed — patient self-report pending]',
+      sara: '[Not assessed]',
+      samhanana: '[Not assessed]',
+      pramana: '[Not assessed — requires physical measurement]',
+      ahara_shakti: '[Not assessed]',
+      vyayama_shakti: '[Not assessed]',
+      sattva: '[Not assessed]',
+      satmya: '[Not assessed]',
+      vaya: patientInfo?.age ? `${patientInfo.age} वर्ष` : '[Not recorded]',
+      nidana_samprapti: '[Not assessed]',
+    };
+
+    // Map interview answers to AYUSH fields based on question category
+    for (const item of history) {
+      const answer = item.a || '';
+      const question = item.q || '';
+      if (question.includes('प्रकृति')) ayushFields.prakriti = `Patient self-report: ${answer}`;
+      if (question.includes('अग्नि')) ayushFields.agni = `Patient self-report: ${answer}`;
+      if (question.includes('कोष्ठ')) ayushFields.koshtha = `Patient self-report: ${answer}`;
+      if (question.includes('खानपान') || question.includes('रस')) ayushFields.ahara_vihara = `Patient self-report: ${answer}`;
+      if (question.includes('निद्रा') || question.includes('दिनचर्या')) ayushFields.ahara_vihara += ` | ${answer}`;
+      if (question.includes('गठन') || question.includes('धातु')) { ayushFields.sara = `Patient self-report: ${answer}`; ayushFields.samhanana = `Patient self-report: ${answer}`; }
+      if (question.includes('प्रमाण') || question.includes('माप')) ayushFields.pramana = `Patient self-report: ${answer}`;
+      if (question.includes('व्यायाम') || question.includes('सहनशीलता')) ayushFields.vyayama_shakti = `Patient self-report: ${answer}`;
+      if (question.includes('सत्त्व') || question.includes('मानसिक')) ayushFields.sattva = `Patient self-report: ${answer}`;
+      if (question.includes('कारण') || question.includes('निदान')) ayushFields.nidana_samprapti = `Patient self-report: ${answer}`;
+    }
+
+    // PRD FR09: Track missing fields explicitly
+    const missingFields: string[] = [];
+    for (const [key, val] of Object.entries(ayushFields)) {
+      if (typeof val === 'string' && val.includes('[Not assessed')) missingFields.push(key);
+    }
 
     return {
       clinical_mode: 'ayush',
-      chief_complaint: `आयुर्वेदिक ओपीडी परामर्श: ${chiefComplaint || 'स्वास्थ्य परीक्षण व वात-पित्त-कफ असंतुलन'}`,
-      hpi: `रोगी (${patientInfo?.name || 'रुग्ण'}, ${patientInfo?.age || '28'} वर्ष / ${patientInfo?.gender || 'पुरुष'}) द्वारा दशविध परीक्षा विवरण: ${transcriptText}`,
+      chief_complaint: `आयुर्वेदिक ओपीडी परामर्श: ${chiefComplaint || 'स्वास्थ्य परीक्षण'}`,
+      hpi: `रोगी (${patientInfo?.name || 'Patient'}, ${patientInfo?.age || ''} वर्ष / ${patientInfo?.gender || ''}) द्वारा दशविध परीक्षा विवरण: ${transcriptText}`,
       past_history: prescriptions
-        ? `पूर्व औषध एवं उपचार विवरण:\n${prescriptions}`
-        : 'पूर्व में कोई दीर्घकालिक औषधि इतिहास नहीं।',
-      medications_allergies: 'औषध सात्म्यता: कोई ज्ञात औषधि एलर्जी नहीं। त्रिफला/पाचन योग पूर्व में प्रयुक्त।',
-      review_of_systems: 'अग्नि: मंदाग्नि/विषमाग्नि लक्षित। कोष्ठ: मध्यम/क्रूर। धातु सारता एवं सत्त्व मध्यम।',
-      ayush_pariksha: {
-        prakriti: 'वात-पित्तज प्रकृति (Vata-Pitta Prakriti)',
-        vikriti: 'समान वात एवं पाचक पित्त दृष्टि (Vata-Pitta Imbalance with Ama)',
-        agni: 'विषमाग्नि / मंदाग्नि (Irregular Digestive Agni)',
-        koshtha: 'मध्यम कोष्ठ (Moderate Bowel Habit)',
-        ahara_vihara: 'कटु-अम्ल रस प्रधान आहार, रात्रि जागरण एवं मानसिक तनाव',
-        sara: 'मध्यम रस-रक्त सारता',
-        samhanana: 'मध्यम संहनन (Average body build)',
-        ahara_shakti: 'मध्यम (Moderate appetite)',
-        vyayama_shakti: 'अवर से मध्यम बल (Mild to moderate exertion capacity)',
-        sattva: 'मध्यम सत्त्व (Moderate psychological endurance)',
-        satmya: 'सर्व रस सात्म्य',
-        vaya: 'मध्यम वय (Adult stage)',
-        nidana_samprapti: 'अति-चिंता एवं असमय भोजन से जठराग्निमांद्य एवं वात प्रकोप।',
-      },
+        ? `[HISTORIC] पूर्व औषध एवं उपचार विवरण (may not reflect current regimen):\n${prescriptions}`
+        : '[Not provided] — No prior prescription documents uploaded.',
+      medications_allergies: '[Not asked] — Medication and allergy assessment pending clinician review.',
+      review_of_systems: 'Documented from patient self-report during Dashavidha Pariksha intake.',
+      ayush_pariksha: ayushFields,
+      missingFields,
       lab_outliers: [],
       drug_interactions: [],
+      reviewState: 'submitted',
     };
   }
 
@@ -345,20 +432,38 @@ export async function generateSummary(
     });
   }
 
+  // PRD FR09: Track missing fields explicitly
+  const missingFields: string[] = [];
+  if (!clinicalNote.medications_allergies || clinicalNote.medications_allergies.includes('None reported')) missingFields.push('medications_allergies');
+  if (!clinicalNote.family_history || clinicalNote.family_history.includes('Non-contributory')) missingFields.push('family_history');
+  if (!prescriptions) missingFields.push('prior_documents');
+
+  // PRD FR09: Track unresolved conflicts
+  const unresolvedConflicts: string[] = [];
+  if (prescriptions && clinicalNote.medications_allergies) {
+    // Check for potential current vs historic medication confusion
+    unresolvedConflicts.push('[Review needed] Verify whether medications from uploaded prescriptions are still actively taken by patient.');
+  }
+
   return {
     clinical_mode: 'allopathy',
     chief_complaint: clinicalNote.chief_complaint,
     hpi: clinicalNote.hpi,
     past_history: prescriptions
-      ? `Digitized Prior Prescriptions & Health Records:\n${prescriptions}`
-      : 'No prior paper records uploaded at kiosk intake.',
+      ? `[HISTORIC — verify current status with patient] Digitized Prior Prescriptions & Health Records:\n${prescriptions}`
+      : '[Not provided] — No prior paper records uploaded at kiosk intake.',
     medications_allergies: clinicalNote.medications_allergies,
     family_history: clinicalNote.family_history,
-    personal_social_history: 'Personal & Social History:\n• Diet: Regular mixed diet\n• Sleep & Stress: Documented\n• Habits: No active tobacco or heavy alcohol use reported',
+    personal_social_history: clinicalNote.hpi.length > 50
+      ? 'Personal & Social History:\n• Documented from patient interview'
+      : '[Not fully assessed] — Personal & social history not covered during intake.',
     review_of_systems: clinicalNote.review_of_systems,
-    prior_investigations: labOutliers.length > 0 ? `Lab Outliers Detected: ${labOutliers.map((l) => `${l.testName}: ${l.value} ${l.unit} [${l.riskLevel.toUpperCase()}]`).join(', ')}` : 'No acute lab outliers detected on intake.',
+    prior_investigations: labOutliers.length > 0 ? `Lab Outliers Detected: ${labOutliers.map((l) => `${l.testName}: ${l.value} ${l.unit} [${l.riskLevel.toUpperCase()}]`).join(', ')}` : '[No lab data available] — No lab reports uploaded or extracted.',
     lab_outliers: labOutliers,
     drug_interactions: drugInteractions,
+    missingFields,
+    unresolvedConflicts,
+    reviewState: 'submitted',
   };
 }
 

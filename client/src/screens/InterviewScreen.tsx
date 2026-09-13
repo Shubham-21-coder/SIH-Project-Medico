@@ -16,7 +16,7 @@ interface InterviewScreenProps {
   initialQuestion: LLMQuestionResponse;
   patientInfo?: PatientInfo | null;
   clinicalMode?: ClinicalMode;
-  onAnswerSubmit: (answerText: string) => Promise<LLMQuestionResponse>;
+  onAnswerSubmit: (answerText: string, answerState?: string, provenance?: any) => Promise<LLMQuestionResponse>;
   language?: string;
 }
 
@@ -143,12 +143,17 @@ const InterviewScreen: React.FC<InterviewScreenProps> = ({
     }, 45); // 45ms per word for natural conversational cadence
   };
 
-  const handleSend = async (textToSend: string) => {
+  const handleSend = async (textToSend: string, inputMethod: 'text' | 'voice' | 'touch' = 'text', answerState: string = 'answered') => {
     const text = textToSend || inputVal.trim();
     if (!text || isThinking || isStreamingText) return;
 
+    // PRD FR03: Show answer state label for non-standard responses
+    const displayText = answerState === 'unknown' ? `[I don't know] ${text}`
+      : answerState === 'declined' ? `[Prefer not to answer] ${text}`
+      : text;
+
     // 1. Instantly display user bubble
-    const updatedMessages: Message[] = [...messages, { role: 'user', text }];
+    const updatedMessages: Message[] = [...messages, { role: 'user', text: displayText }];
     setMessages(updatedMessages);
     setInputVal('');
     setCurrentReplies([]);
@@ -159,7 +164,12 @@ const InterviewScreen: React.FC<InterviewScreenProps> = ({
 
     try {
       // 2. Fetch intelligent follow-up from Clinical Engine
-      const responsePromise = onAnswerSubmit(text);
+      const responsePromise = onAnswerSubmit(text, answerState, {
+        language: language === 'hi' ? 'hi-IN' : language,
+        inputMethod,
+        speakerRole: 'patient',
+        timestamp: new Date().toISOString(),
+      });
 
       // 3. Ensure realistic clinical thinking duration (~1.4s to 1.8s)
       const [response] = await Promise.all([
@@ -171,7 +181,9 @@ const InterviewScreen: React.FC<InterviewScreenProps> = ({
 
       if (response && response.next_question) {
         setCurrentCategory(response.ayush_category);
-        setQuestionCount((prev) => prev + 1);
+        if (!(response as any).is_invalid_answer) {
+          setQuestionCount((prev) => prev + 1);
+        }
 
         // 4. Stream response word-by-word
         streamAssistantMessage(
@@ -188,7 +200,7 @@ const InterviewScreen: React.FC<InterviewScreenProps> = ({
 
   const handleVoiceTranscript = (text: string) => {
     if (text) {
-      handleSend(text);
+      handleSend(text, 'voice');
     }
   };
 
@@ -256,9 +268,28 @@ const InterviewScreen: React.FC<InterviewScreenProps> = ({
             <div className="chips-hint-label">⚡ Quick options (or type/speak below):</div>
             <QuickReplyChips
               options={currentReplies}
-              onSelect={(opt) => handleSend(opt)}
+              onSelect={(opt) => handleSend(opt, 'touch')}
               disabled={isThinking || isStreamingText}
             />
+            {/* PRD FR03: Distinct answer state buttons */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem', borderRadius: '16px', opacity: 0.85 }}
+                onClick={() => handleSend('I don\'t know', 'touch', 'unknown')}
+                disabled={isThinking || isStreamingText}
+              >
+                🤷 I don't know
+              </button>
+              <button
+                className="btn btn-secondary"
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.7rem', borderRadius: '16px', opacity: 0.85 }}
+                onClick={() => handleSend('Prefer not to answer', 'touch', 'declined')}
+                disabled={isThinking || isStreamingText}
+              >
+                🚫 Prefer not to answer
+              </button>
+            </div>
           </div>
         )}
 

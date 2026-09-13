@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PrescriptionPrintView from '../components/PrescriptionPrintView';
 import AuditLogScreen from './AuditLogScreen';
 import { generateAutoRx, generateSummary, generateFhirBundle } from '../utils/api';
-import { SummaryData, PrescriptionData, Medication, PatientInfo, DoctorInfo, FhirBundle } from '../types/medikiosk';
+import { SummaryData, PrescriptionData, Medication, PatientInfo, DoctorInfo, ReviewState, DeliveryStatus, FhirBundle } from '../types/medikiosk';
 
 interface DoctorDashboardProps {
   summary: SummaryData;
@@ -11,6 +11,10 @@ interface DoctorDashboardProps {
   prescriptions?: string;
   doctorInfo?: DoctorInfo | null;
   sessionId?: string | null;
+  encounterId?: string | null;
+  reviewState?: ReviewState;
+  deliveryStatus?: DeliveryStatus;
+  onDeliveryStatusChange?: (status: DeliveryStatus) => void;
   onNewPatient: () => void;
 }
 

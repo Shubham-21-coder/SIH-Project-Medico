@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { sendSmsOtp, verifySmsOtp } from '../utils/api';
+import { sendSmsOtp, verifySmsOtp, confirmAbhaOtp, initiateAbhaAuth } from '../utils/api';
 
 interface OtpModalProps {
-  identifier: string; // Phone number or Email
+  identifier: string; // Phone number, Email, or ABHA ID
   channel?: 'sms' | 'email';
-  onVerify: (sessionToken?: string) => void;
+  isAbdm?: boolean;
+  initialTxnId?: string;
+  maskedMobile?: string;
+  onVerify: (sessionToken?: string, abhaProfile?: any) => void;
   onClose: () => void;
 }
 
@@ -39,13 +42,20 @@ function playSmsChime() {
   }
 }
 
-function triggerSystemNotification(target: string, otpCode: string, isEmail: boolean) {
+function triggerSystemNotification(target: string, otpCode: string, isEmail: boolean, isAbdm: boolean) {
   if (!('Notification' in window)) return;
   const showNotif = () => {
-    new Notification(isEmail ? '✉️ Ayush Setu Email OTP Alert' : '📲 Ayush Setu SMS OTP Alert', {
-      body: `Verification code for ${target} is ${otpCode}. Valid for 5 mins.`,
-      icon: '🌿',
-    });
+    new Notification(
+      isAbdm
+        ? '🇮🇳 ABDM Health Account OTP Alert'
+        : isEmail
+        ? '✉️ Ayush Setu Email OTP Alert'
+        : '📲 Ayush Setu SMS OTP Alert',
+      {
+        body: `Verification code for ${target} is ${otpCode}. Valid for 5 mins.`,
+        icon: '🌿',
+      }
+    );
   };
 
   if (Notification.permission === 'granted') {
@@ -57,14 +67,23 @@ function triggerSystemNotification(target: string, otpCode: string, isEmail: boo
   }
 }
 
-const OtpModal: React.FC<OtpModalProps> = ({ identifier, channel = 'sms', onVerify, onClose }) => {
-  const isEmail = channel === 'email' || identifier.includes('@');
+const OtpModal: React.FC<OtpModalProps> = ({
+  identifier,
+  channel = 'sms',
+  isAbdm = false,
+  initialTxnId = '',
+  maskedMobile = '',
+  onVerify,
+  onClose,
+}) => {
+  const isEmail = !isAbdm && (channel === 'email' || identifier.includes('@'));
+  const [txnId, setTxnId] = useState<string>(initialTxnId);
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [timer, setTimer] = useState<number>(30);
   const [error, setError] = useState<string>('');
   const [statusMsg, setStatusMsg] = useState<string>('');
   const [deliveredOtp, setDeliveredOtp] = useState<string>('');
-  const [isSending, setIsSending] = useState<boolean>(true);
+  const [isSending, setIsSending] = useState<boolean>(!initialTxnId);
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -73,18 +92,30 @@ const OtpModal: React.FC<OtpModalProps> = ({ identifier, channel = 'sms', onVeri
     setError('');
     setStatusMsg('');
     try {
-      const res = await sendSmsOtp(identifier, isEmail ? 'email' : 'sms');
-      if (res.success) {
-        setStatusMsg(res.message || (isEmail ? `Verification OTP sent to ${identifier}` : `Real OTP sent via SMS to +91-${identifier}`));
-        setTimer(res.cooldownSeconds || 30);
-        if (res.otpCode) {
-          setDeliveredOtp(res.otpCode);
-          playSmsChime();
-          triggerSystemNotification(identifier, res.otpCode, isEmail);
+      if (isAbdm) {
+        const res = await initiateAbhaAuth(identifier, 'MOBILE_OTP');
+        if (res.success) {
+          setTxnId(res.txnId);
+          setStatusMsg(`ABDM OTP dispatched to mobile ${res.maskedMobile || 'registered with ABHA'}.`);
+          setTimer(res.cooldownSeconds || 30);
+        } else {
+          setError(res.error || 'Failed to initiate ABDM authentication.');
+          if (res.cooldownSeconds) setTimer(res.cooldownSeconds);
         }
       } else {
-        setError(res.error || 'Failed to dispatch verification code.');
-        if (res.cooldownSeconds) setTimer(res.cooldownSeconds);
+        const res = await sendSmsOtp(identifier, isEmail ? 'email' : 'sms');
+        if (res.success) {
+          setStatusMsg(res.message || (isEmail ? `Verification OTP sent to ${identifier}` : `Real OTP sent via SMS to +91-${identifier}`));
+          setTimer(res.cooldownSeconds || 30);
+          if (res.otpCode) {
+            setDeliveredOtp(res.otpCode);
+            playSmsChime();
+            triggerSystemNotification(identifier, res.otpCode, isEmail, isAbdm);
+          }
+        } else {
+          setError(res.error || 'Failed to dispatch verification code.');
+          if (res.cooldownSeconds) setTimer(res.cooldownSeconds);
+        }
       }
     } catch (err: any) {
       console.error('OTP request error:', err);
@@ -95,8 +126,12 @@ const OtpModal: React.FC<OtpModalProps> = ({ identifier, channel = 'sms', onVeri
   };
 
   useEffect(() => {
-    requestOtp();
-  }, [identifier]);
+    if (!initialTxnId) {
+      requestOtp();
+    } else {
+      setStatusMsg(`ABDM OTP sent to mobile ${maskedMobile || 'registered with ABHA ID'}.`);
+    }
+  }, [identifier, initialTxnId]);
 
   useEffect(() => {
     if (timer <= 0) return;
@@ -167,14 +202,26 @@ const OtpModal: React.FC<OtpModalProps> = ({ identifier, channel = 'sms', onVeri
     setError('');
 
     try {
-      const res = await verifySmsOtp(identifier, enteredOtp);
-      if (res.success) {
-        if (res.sessionToken) {
-          sessionStorage.setItem('ayush_auth_token', res.sessionToken);
+      if (isAbdm) {
+        const res = await confirmAbhaOtp(txnId, enteredOtp);
+        if (res.success) {
+          if (res.sessionToken) {
+            sessionStorage.setItem('ayush_auth_token', res.sessionToken);
+          }
+          onVerify(res.sessionToken, res.profile);
+        } else {
+          setError(res.error || 'Invalid ABDM OTP code.');
         }
-        onVerify(res.sessionToken);
       } else {
-        setError(res.error || 'Invalid OTP code.');
+        const res = await verifySmsOtp(identifier, enteredOtp);
+        if (res.success) {
+          if (res.sessionToken) {
+            sessionStorage.setItem('ayush_auth_token', res.sessionToken);
+          }
+          onVerify(res.sessionToken);
+        } else {
+          setError(res.error || 'Invalid OTP code.');
+        }
       }
     } catch (err: any) {
       console.error('OTP verify error:', err);
@@ -187,11 +234,23 @@ const OtpModal: React.FC<OtpModalProps> = ({ identifier, channel = 'sms', onVeri
   return (
     <div className="rx-modal-overlay fade-in">
       <div className="otp-modal-card glass-card slide-in" style={{ maxWidth: '490px' }}>
-        <div className="otp-icon">{isEmail ? '✉️' : '📱'}</div>
-        <h2>{isEmail ? 'Patient Email Verification' : 'Patient Phone Verification'}</h2>
+        <div className="otp-icon">{isAbdm ? '🇮🇳' : isEmail ? '✉️' : '📱'}</div>
+        <h2>
+          {isAbdm
+            ? 'ABDM / ABHA Authentication'
+            : isEmail
+            ? 'Patient Email Verification'
+            : 'Patient Phone Verification'}
+        </h2>
         <p className="subtitle">
           {isSending ? (
-            <span className="scanning-text">Dispatching {isEmail ? 'Email' : 'SMS'} Verification Code...</span>
+            <span className="scanning-text">Connecting with ABDM Gateway...</span>
+          ) : isAbdm ? (
+            <>
+              Enter the 6-digit OTP dispatched by ABDM Gateway to the mobile number registered with{' '}
+              <strong style={{ color: 'var(--accent-teal, #00d4aa)' }}>{identifier}</strong>
+              {maskedMobile && <span style={{ display: 'block', marginTop: '4px', fontSize: '0.8rem', color: '#94a3b8' }}>Linked Mobile: ({maskedMobile})</span>}
+            </>
           ) : (
             <>
               Enter the 6-digit code sent to{' '}
@@ -231,7 +290,7 @@ const OtpModal: React.FC<OtpModalProps> = ({ identifier, channel = 'sms', onVeri
             {otp.map((digit, idx) => (
               <input
                 key={idx}
-                ref={(el) => (inputRefs.current[idx] = el)}
+                ref={(el) => { inputRefs.current[idx] = el; }}
                 id={`otp-input-${idx}`}
                 type="text"
                 inputMode="numeric"
@@ -276,7 +335,7 @@ const OtpModal: React.FC<OtpModalProps> = ({ identifier, channel = 'sms', onVeri
                 disabled={isSending}
                 style={{ background: 'none', border: 'none', color: '#00d4aa', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem' }}
               >
-                🔄 Resend {isEmail ? 'Email' : 'SMS'} OTP
+                🔄 Resend {isAbdm ? 'ABDM' : isEmail ? 'Email' : 'SMS'} OTP
               </button>
             )}
           </div>

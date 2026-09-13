@@ -40,48 +40,54 @@ export default function useSpeechSynthesis() {
         window.speechSynthesis.resume(); // Ensure speech context is not paused by browser policy
 
         const cleanText = text.replace(/[*_#•►→🚨⚠️]/g, '').trim();
-        const utterance = new SpeechSynthesisUtterance(cleanText);
+        if (!cleanText) return;
 
-        const candidateTags = LANGUAGE_TAGS[lang] || ['hi-IN', 'en-IN'];
-        utterance.lang = candidateTags[0];
-        utterance.rate = 0.90; // Natural pacing for OPD kiosk clarity
+        // Small 40ms buffer to allow browser audio engine to reset cleanly before speaking
+        setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(cleanText);
 
-        const allVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
+          const candidateTags = LANGUAGE_TAGS[lang] || ['hi-IN', 'en-IN'];
+          utterance.lang = candidateTags[0];
+          utterance.rate = 0.90; // Natural pacing for OPD kiosk clarity
 
-        // 1. Try finding exact matching voice
-        let selectedVoice: SpeechSynthesisVoice | undefined;
-        for (const tag of candidateTags) {
-          const match = allVoices.find(
-            (v) =>
-              v.lang.toLowerCase().replace(/_/g, '-').includes(tag.toLowerCase()) ||
-              (lang === 'mr' && (v.name.toLowerCase().includes('marathi') || v.name.toLowerCase().includes('hindi') || v.lang.includes('hi'))) ||
-              (lang === 'te' && (v.name.toLowerCase().includes('telugu') || v.lang.includes('te'))) ||
-              (lang === 'ta' && (v.name.toLowerCase().includes('tamil') || v.lang.includes('ta'))) ||
-              (lang === 'bn' && (v.name.toLowerCase().includes('bengali') || v.name.toLowerCase().includes('bangla') || v.lang.includes('bn'))) ||
-              (lang === 'gu' && (v.name.toLowerCase().includes('gujarati') || v.lang.includes('gu'))) ||
-              (lang === 'kn' && (v.name.toLowerCase().includes('kannada') || v.lang.includes('kn'))) ||
-              (lang === 'hi' && (v.name.toLowerCase().includes('hindi') || v.lang.includes('hi')))
-          );
-          if (match) {
-            selectedVoice = match;
-            utterance.lang = match.lang;
-            break;
+          const allVoices = voices.length > 0 ? voices : window.speechSynthesis.getVoices();
+
+          // Try finding exact matching voice
+          let selectedVoice: SpeechSynthesisVoice | undefined;
+          for (const tag of candidateTags) {
+            const match = allVoices.find(
+              (v) =>
+                v.lang.toLowerCase().replace(/_/g, '-').includes(tag.toLowerCase()) ||
+                (lang === 'mr' && (v.name.toLowerCase().includes('marathi') || v.name.toLowerCase().includes('hindi') || v.lang.includes('hi'))) ||
+                (lang === 'te' && (v.name.toLowerCase().includes('telugu') || v.lang.includes('te'))) ||
+                (lang === 'ta' && (v.name.toLowerCase().includes('tamil') || v.lang.includes('ta'))) ||
+                (lang === 'bn' && (v.name.toLowerCase().includes('bengali') || v.name.toLowerCase().includes('bangla') || v.lang.includes('bn'))) ||
+                (lang === 'gu' && (v.name.toLowerCase().includes('gujarati') || v.lang.includes('gu'))) ||
+                (lang === 'kn' && (v.name.toLowerCase().includes('kannada') || v.lang.includes('kn'))) ||
+                (lang === 'hi' && (v.name.toLowerCase().includes('hindi') || v.lang.includes('hi')))
+            );
+            if (match) {
+              selectedVoice = match;
+              utterance.lang = match.lang;
+              break;
+            }
           }
-        }
 
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
-        }
+          if (selectedVoice) {
+            utterance.voice = selectedVoice;
+          }
 
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => setIsSpeaking(false);
-        utterance.onerror = (e) => {
-          console.warn('Speech synthesis error or fallback:', e);
-          setIsSpeaking(false);
-        };
+          utterance.onstart = () => setIsSpeaking(true);
+          utterance.onend = () => setIsSpeaking(false);
+          utterance.onerror = (e) => {
+            console.warn('Speech synthesis error or fallback:', e);
+            setIsSpeaking(false);
+          };
 
-        window.speechSynthesis.speak(utterance);
+          window.speechSynthesis.speak(utterance);
+        }, 40);
       } catch (err) {
+
         console.error('SpeechSynthesis invocation failed:', err);
         setIsSpeaking(false);
       }
