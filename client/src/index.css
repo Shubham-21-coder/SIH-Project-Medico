@@ -3885,21 +3885,86 @@ img, svg, video, canvas {
     gap: 0.3rem !important;
   }
 
-  .otp-inputs-row input {
-    width: 2.1rem !important;
-    height: 2.6rem !important;
+  .otp-box {
+    width: clamp(1.9rem, 10vw, 2.4rem) !important;
+    height: clamp(2.4rem, 12vw, 2.9rem) !important;
     font-size: 1.1rem !important;
+  }
+
+  .chat-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 0.4rem !important;
+  }
+
+  .header-info {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .patient-name {
+    font-size: 0.85rem !important;
+  }
+
+  .mode-pill-mini {
+    display: inline-block;
+    margin-top: 0.2rem;
   }
 }
 
+/* ============================================================
+   RESPONSIVE FORM & MODAL UTILITIES
+   ============================================================ */
 
+.auth-tab-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 0.4rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1.75rem;
+}
 
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
 
+.form-row-3col {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
 
+.otp-inputs-row {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  margin: 1.25rem 0;
+  width: 100%;
+}
 
+.otp-box {
+  width: clamp(2.1rem, 11vw, 3rem);
+  height: clamp(2.6rem, 13vw, 3.5rem);
+  font-size: clamp(1.1rem, 5vw, 1.5rem);
+  font-weight: 700;
+  text-align: center;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.6);
+  color: #fff;
+  transition: all 0.2s ease;
+}
 
-
-
-
-
-
+.otp-box:focus {
+  border-color: var(--accent-teal, #00d4aa);
+  box-shadow: 0 0 10px rgba(0, 212, 170, 0.3);
+  outline: none;
+}

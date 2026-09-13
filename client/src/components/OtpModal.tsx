@@ -297,17 +297,6 @@ const OtpModal: React.FC<OtpModalProps> = ({
                 pattern="[0-9]*"
                 maxLength={1}
                 className="otp-box"
-                style={{
-                  width: '3rem',
-                  height: '3.5rem',
-                  fontSize: '1.5rem',
-                  fontWeight: 700,
-                  textAlign: 'center',
-                  borderRadius: '8px',
-                  border: '2px solid rgba(255, 255, 255, 0.15)',
-                  background: 'rgba(15, 23, 42, 0.6)',
-                  color: '#fff',
-                }}
                 value={digit}
                 onChange={(e) => handleOtpChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}

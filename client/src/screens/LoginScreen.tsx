@@ -310,18 +310,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSubmit, onBack, onSkip }) =
         </div>
 
         {/* 2 Main Options Selector: New User vs Sign In */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '0.75rem',
-            background: 'rgba(15, 23, 42, 0.6)',
-            padding: '0.4rem',
-            borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            marginBottom: '1.75rem',
-          }}
-        >
+        <div className="auth-tab-selector">
           <button
             type="button"
             className={`btn ${authMode === 'register' ? 'btn-primary' : 'btn-secondary'}`}
@@ -428,7 +417,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSubmit, onBack, onSkip }) =
             </div>
 
             {/* 2 & 3. Create Login ID & Username */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-row-2col">
               <div className="form-group">
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem', color: '#e2e8f0' }}>
                   2. Create Login ID <span style={{ color: '#ef4444' }}>*</span>
@@ -459,7 +448,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onSubmit, onBack, onSkip }) =
             </div>
 
             {/* 4 & 5. Password, Age, Gender */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div className="form-row-3col">
               <div className="form-group">
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem', color: '#e2e8f0' }}>
                   4. Create Password <span style={{ color: '#ef4444' }}>*</span>
