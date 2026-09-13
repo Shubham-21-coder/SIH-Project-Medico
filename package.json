@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "concurrently -n client,server -c cyan,green \"npm run dev:client\" \"npm run dev:server\"",
     "dev:client": "npm run dev --prefix client",
-    "dev:server": "npm run dev --prefix server"
+    "dev:server": "npm run dev --prefix server",
+    "deploy": "npm run deploy --prefix client"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"
