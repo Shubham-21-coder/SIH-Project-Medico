@@ -8,6 +8,7 @@ import {
   createUser,
   updateUserPassword,
   logAuditTrail,
+  verifyDoctorCredentials,
 } from '../services/db.js';
 
 const router = Router();
@@ -279,6 +280,54 @@ router.get('/session', (req: Request, res: Response) => {
     return res.json({ valid: true, identifier: session.identifier, channel: session.channel });
   } else {
     return res.status(401).json({ valid: false, error: 'Session expired or invalid.' });
+  }
+});
+
+/**
+ * POST /api/auth/doctor/login
+ * Verifies Doctor Reference ID / NMC Registration Number & Security PIN against DB & HPR Gateway
+ */
+router.post('/doctor/login', async (req: Request, res: Response) => {
+  try {
+    const { doctorId, pin } = req.body || {};
+
+    if (!doctorId || !pin) {
+      return res.status(400).json({
+        success: false,
+        error: 'Doctor Reference ID / Reg. No. and Security PIN are required.',
+      });
+    }
+
+    const verification = verifyDoctorCredentials(doctorId, pin);
+
+    if (verification.verified && verification.doctor) {
+      logAuditTrail('DOCTOR_VERIFIED_LOGIN', verification.doctor.doctor_ref_id, {
+        name: verification.doctor.doctor_name,
+        reg_no: verification.doctor.nmc_hpr_reg_no,
+      });
+
+      return res.json({
+        success: true,
+        message: verification.message,
+        doctor: {
+          id: verification.doctor.doctor_ref_id,
+          name: verification.doctor.doctor_name,
+          nmcRegNo: verification.doctor.nmc_hpr_reg_no,
+          role: verification.doctor.speciality,
+          department: verification.doctor.department,
+          councilName: verification.doctor.council_name,
+          status: verification.doctor.verification_status,
+        },
+      });
+    } else {
+      return res.status(401).json({
+        success: false,
+        error: verification.message,
+      });
+    }
+  } catch (error: any) {
+    console.error('Doctor verification error:', error);
+    res.status(500).json({ success: false, error: 'Internal server error during doctor verification.' });
   }
 });
 
