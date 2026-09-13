@@ -1,40 +1,20 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { sendOtp, verifyOtp, validateSessionToken, normalizeIdentifier } from '../services/sms.js';
+import {
+  findUserByLoginId,
+  findUserByAbhaOrAadhaar,
+  createUser,
+  updateUserPassword,
+  logAuditTrail,
+} from '../services/db.js';
 
 const router = Router();
 
-interface UserRecord {
-  loginId: string;
-  username: string;
-  abhaOrAadhaar: string;
-  password: string;
-  email?: string;
-  phone?: string;
-  age?: string | number;
-  gender?: string;
-  createdAt: string;
-}
-
-// In-memory user database
-const usersDb = new Map<string, UserRecord>();
-
-// Pre-seed a demo patient account for testing
-usersDb.set('shubham2026', {
-  loginId: 'shubham2026',
-  username: 'Shubham Garg',
-  abhaOrAadhaar: '91-4920-1849-2810',
-  password: 'password123',
-  email: 'shubham@example.com',
-  phone: '7500259740',
-  age: '20',
-  gender: 'Male',
-  createdAt: new Date().toISOString(),
-});
-
 /**
  * POST /api/auth/register
- * Registers a new patient with ABHA/Aadhaar number, login ID, username, and password
+ * Registers a new patient with ABHA/Aadhaar number, login ID, username, and password in SQLite DB
  */
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -47,40 +27,46 @@ router.post('/register', async (req: Request, res: Response) => {
       });
     }
 
-    const key = loginId.trim().toLowerCase();
-    if (usersDb.has(key)) {
+    const existingUser = findUserByLoginId(loginId.trim()) || findUserByAbhaOrAadhaar(abhaOrAadhaar.trim());
+    if (existingUser) {
       return res.status(400).json({
         success: false,
-        error: `Login ID "${loginId}" is already taken. Please choose another Login ID or Sign In.`,
+        error: `Account with Login ID "${loginId}" or ABHA/Aadhaar number is already registered. Please Sign In.`,
       });
     }
 
-    const newUser: UserRecord = {
+    const newUser = createUser({
       loginId: loginId.trim(),
       username: username.trim(),
-      abhaOrAadhaar: abhaOrAadhaar.trim(),
+      name: username.trim(),
       password,
+      abhaOrAadhaar: abhaOrAadhaar.trim(),
       email: email?.trim(),
       phone: phone?.trim(),
-      age: age || 25,
+      age: Number(age) || 25,
       gender: gender || 'Male',
-      createdAt: new Date().toISOString(),
-    };
+      consentGranted: true,
+    });
 
-    usersDb.set(key, newUser);
+    logAuditTrail('REGISTER_PATIENT', newUser.login_id, {
+      name: newUser.name,
+      abha_id: newUser.abha_id,
+      aadhaar_number: newUser.aadhaar_number,
+    });
 
     const token = `TOKEN-${crypto.randomUUID()}`;
     return res.json({
       success: true,
-      message: 'New user account registered successfully!',
+      message: 'New patient account registered successfully in database!',
       token,
       user: {
-        loginId: newUser.loginId,
-        name: newUser.username,
+        loginId: newUser.login_id,
+        name: newUser.name,
         username: newUser.username,
-        abhaOrAadhaar: newUser.abhaOrAadhaar,
-        abhaNumber: newUser.abhaOrAadhaar,
-        identifier: newUser.loginId,
+        abhaOrAadhaar: newUser.abha_id || newUser.aadhaar_number,
+        abhaNumber: newUser.abha_id,
+        aadhaarNumber: newUser.aadhaar_number,
+        identifier: newUser.login_id,
         email: newUser.email,
         phone: newUser.phone,
         age: newUser.age,
@@ -89,13 +75,13 @@ router.post('/register', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Error registering user:', error);
-    res.status(500).json({ success: false, error: 'Internal server error during registration.' });
+    res.status(500).json({ success: false, error: 'Internal server error during database registration.' });
   }
 });
 
 /**
  * POST /api/auth/login
- * Sign in using Login ID and Password
+ * Sign in using Login ID / Email / ABHA ID and Password verified against SQLite DB
  */
 router.post('/login', async (req: Request, res: Response) => {
   try {
@@ -105,28 +91,24 @@ router.post('/login', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'Login ID and Password are required.' });
     }
 
-    const key = loginId.trim().toLowerCase();
-    let user = usersDb.get(key);
+    const user = findUserByLoginId(loginId.trim()) || findUserByAbhaOrAadhaar(loginId.trim());
 
-    // Also search by email or ABHA ID if not found directly by loginId key
     if (!user) {
-      for (const u of usersDb.values()) {
-        if (
-          u.email?.toLowerCase() === key ||
-          u.abhaOrAadhaar.replace(/\D/g, '') === key.replace(/\D/g, '')
-        ) {
-          user = u;
-          break;
-        }
-      }
-    }
-
-    if (!user || user.password !== password) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid Login ID or Password. If you do not have an account, please register as a new user.',
+        error: 'Account not found. Please verify your Login ID or register as a new user.',
       });
     }
+
+    const isMatch = bcrypt.compareSync(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid password. Please check your credentials or reset password via Email OTP.',
+      });
+    }
+
+    logAuditTrail('LOGIN_SUCCESS', user.login_id, { ip: req.ip });
 
     const token = `TOKEN-${crypto.randomUUID()}`;
     return res.json({
@@ -134,12 +116,13 @@ router.post('/login', async (req: Request, res: Response) => {
       message: 'Signed in successfully!',
       token,
       user: {
-        loginId: user.loginId,
-        name: user.username,
+        loginId: user.login_id,
+        name: user.name,
         username: user.username,
-        abhaOrAadhaar: user.abhaOrAadhaar,
-        abhaNumber: user.abhaOrAadhaar,
-        identifier: user.loginId,
+        abhaOrAadhaar: user.abha_id || user.aadhaar_number,
+        abhaNumber: user.abha_id,
+        aadhaarNumber: user.aadhaar_number,
+        identifier: user.login_id,
         email: user.email,
         phone: user.phone,
         age: user.age,
@@ -154,7 +137,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
 /**
  * POST /api/auth/reset-password
- * Resets user password after OTP verification sent to email
+ * Resets user password in SQLite DB after OTP verification
  */
 router.post('/reset-password', async (req: Request, res: Response) => {
   try {
@@ -177,28 +160,19 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       });
     }
 
-    // Locate user record to update password
-    const key = (loginId || email).trim().toLowerCase();
-    let user = usersDb.get(key);
-
-    if (!user) {
-      for (const u of usersDb.values()) {
-        if (u.email?.toLowerCase() === key || u.loginId.toLowerCase() === key) {
-          user = u;
-          break;
-        }
-      }
+    const updated = updateUserPassword(targetIdentifier.trim(), newPassword.trim());
+    if (updated) {
+      logAuditTrail('RESET_PASSWORD_SUCCESS', targetIdentifier);
+      return res.json({
+        success: true,
+        message: 'Password reset successfully in database! You can now Sign In with your new password.',
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        error: 'User account not found for password reset.',
+      });
     }
-
-    if (user) {
-      user.password = newPassword;
-      usersDb.set(user.loginId.toLowerCase(), user);
-    }
-
-    return res.json({
-      success: true,
-      message: 'Password reset successfully! You can now Sign In with your new password.',
-    });
   } catch (error: any) {
     console.error('Error resetting password:', error);
     res.status(500).json({ success: false, error: 'Internal server error during password reset.' });
