@@ -183,12 +183,17 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({
         <div className="doc-profile-section">
           <div className="doc-avatar">{isAyush ? '🌿' : '🩺'}</div>
           <div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <h2>{doctorInfo?.name || (isAyush ? 'Vaidya R. K. Shastri (BAMS, MD)' : 'Dr. Ananya Sharma, MD')}</h2>
-              <span className="gov-badge" style={{ fontSize: '0.7rem' }}>● Online (OPD Room 104)</span>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <h2 style={{ margin: 0 }}>{doctorInfo?.name || (isAyush ? 'Vaidya R. K. Shastri (BAMS, MD)' : 'Dr. Ananya Sharma, MD')}</h2>
+              <span className="gov-badge ayush-badge" style={{ fontSize: '0.7rem' }}>
+                🟢 ABDM HPR & NMC Verified ({doctorInfo?.id || 'DOC-101'})
+              </span>
             </div>
-            <div className="doc-meta-text">
-              {doctorInfo?.role || (isAyush ? 'Senior Ayurvedic Physician' : 'Senior Consultant Physician')} • {doctorInfo?.department || (isAyush ? 'AYUSH / Kayachikitsa OPD' : 'General Medicine / OPD')}
+            <div className="doc-meta-text" style={{ marginTop: '0.2rem', fontSize: '0.84rem' }}>
+              {doctorInfo?.role || (isAyush ? 'Senior Ayurvedic Practitioner' : 'Senior Consultant Physician')} • {doctorInfo?.department || (isAyush ? 'AYUSH OPD' : 'General OPD')}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#00d4aa', marginTop: '0.15rem' }}>
+              🏛️ <strong>NMC License:</strong> <code style={{ color: '#fff', background: 'rgba(0,0,0,0.3)', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>NMC/DL/2022/49210</code> (Delhi Medical Council Registered)
             </div>
           </div>
         </div>
