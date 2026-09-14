@@ -23,7 +23,10 @@ yarn-error.log*
 Thumbs.db
 .vercel
 
-# SQLite Database
+# SQLite & Local Database Files
 *.sqlite*
+*.db*
 server/data/*.sqlite*
+server/data/*.db*
+server/data/*.json
 

@@ -146,6 +146,7 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [analysisList, setAnalysisList] = useState<OcrAnalysisItem[]>([]);
   const [invalidErrors, setInvalidErrors] = useState<InvalidFileError[]>([]);
+  const [showDemoSamples, setShowDemoSamples] = useState<boolean>(false);
 
   const validateFile = (file: File): { blocked: boolean; warning: boolean; reason: string } => {
     const name = file.name.toLowerCase().trim();
@@ -295,7 +296,7 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
       <div className="prescription-container glass-card slide-in" style={{ maxWidth: '1040px' }}>
         <div className="prescription-header">
           <div className="patient-badge">
-            👤 Patient: {patientInfo?.name || 'Patient'} ({patientInfo?.age || '20'}y, {patientInfo?.gender || 'Male'}) • ABHA: {patientInfo?.identifier || '91-4920-1849-2810'}
+            👤 Patient: {patientInfo?.name || 'New Patient'} {patientInfo?.age ? `(${patientInfo.age}y, ${patientInfo.gender || 'Other'})` : ''} {patientInfo?.identifier ? `• ABHA/ID: ${patientInfo.identifier}` : ''}
           </div>
           <h1>Medical Document Digitization & Timeline AI</h1>
           <p className="subtitle">
@@ -344,29 +345,50 @@ const PrescriptionScreen: React.FC<PrescriptionScreenProps> = ({ patientInfo, on
           )}
         </div>
 
-        {/* Section 2: Quick Sample Document Timeline Presets */}
-        <div className="rx-section">
-          <h3>⚡ Quick Sample Prior Health Records (Allopathy & AYUSH)</h3>
-          <p className="small-text">Tap any record to simulate instant OCR digitization & lab outlier detection:</p>
-          <div className="sample-rx-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))' }}>
-            {SAMPLE_DOCUMENTS.map((doc) => {
-              const isSelected = selectedDocs.some((item) => item.id === doc.id);
-              return (
-                <div
-                  key={doc.id}
-                  className={`sample-rx-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => toggleSampleDoc(doc)}
-                >
-                  <div className="rx-card-header">
-                    <strong>{doc.title}</strong>
-                    <span>{isSelected ? '✓ Added' : '+ Add'}</span>
-                  </div>
-                  <div className="rx-card-meta">{doc.doctor} • {doc.date}</div>
-                  <pre className="rx-card-text">{doc.text}</pre>
-                </div>
-              );
-            })}
+        {/* Section 2: Optional Sandbox Demo Presets for Testing */}
+        <div className="rx-section glass-card" style={{ padding: '1.25rem', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                🧪 Test Sandbox Presets (Optional Kiosk Demo)
+              </h3>
+              <p className="small-text" style={{ margin: '0.2rem 0 0', opacity: 0.8 }}>
+                {showDemoSamples
+                  ? 'Tap any demo record below to simulate OCR digitization & lab outlier extraction:'
+                  : 'New patient? Upload your own documents above. Click button to load sample documents for testing.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowDemoSamples(!showDemoSamples)}
+              style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
+            >
+              {showDemoSamples ? '🙈 Hide Demo Samples' : '🧪 Load Test Demo Presets'}
+            </button>
           </div>
+
+          {showDemoSamples && (
+            <div className="sample-rx-grid fade-in" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', marginTop: '1rem' }}>
+              {SAMPLE_DOCUMENTS.map((doc) => {
+                const isSelected = selectedDocs.some((item) => item.id === doc.id);
+                return (
+                  <div
+                    key={doc.id}
+                    className={`sample-rx-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => toggleSampleDoc(doc)}
+                  >
+                    <div className="rx-card-header">
+                      <strong>{doc.title}</strong>
+                      <span>{isSelected ? '✓ Added' : '+ Add Test'}</span>
+                    </div>
+                    <div className="rx-card-meta">{doc.doctor} • {doc.date}</div>
+                    <pre className="rx-card-text">{doc.text}</pre>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Section 3: REAL-TIME AI DIGITIZED DOCUMENT OUTPUT & TIMELINE */}
